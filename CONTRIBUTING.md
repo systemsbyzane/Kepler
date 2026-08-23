@@ -8,14 +8,14 @@ Use a branch or fork and open a pull request against `main`. Direct changes to
 the user-visible behavior it changes, and include the validation evidence
 required below.
 
-The plugin source is `plugins/flightdeck/`. The generated workspace is an asset
-of `flightdeck-setup`; changes to its CLI, schemas, workflows, docs, bridges, or
+The plugin source is `plugins/kepler/`. The generated workspace is an asset
+of `kepler-setup`; changes to its CLI, schemas, workflows, docs, bridges, or
 tests must be validated both in place and after fresh generation.
 
 For a behavioral change:
 
 1. identify the mandatory functional surface and neutral source mapping;
-2. update `plugins/flightdeck/process-parity.json` when an inventory surface
+2. update `plugins/kepler/process-parity.json` when an inventory surface
    changes;
 3. update the implementation, machine-readable contract, and focused tests;
 4. add or strengthen a functional parity probe;

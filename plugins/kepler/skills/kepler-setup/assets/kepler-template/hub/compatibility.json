@@ -1,0 +1,187 @@
+{
+  "schema_version": "kepler.hub-compatibility/v1",
+  "schema": "hub/schemas/hub-compatibility.schema.json",
+  "product": "kepler",
+  "template_version": "1.0.0",
+  "capabilities": {
+    "kepler.command.doctor.v1": {
+      "kind": "command",
+      "description": "Read-only structured workspace diagnostics.",
+      "probe": {
+        "help_contains": "bin/kepler doctor "
+      },
+      "managed_paths": [
+        "bin/kepler",
+        "lib/kepler/cli.rb",
+        "lib/kepler/doctor.rb"
+      ],
+      "fallback": {
+        "mode": "compatibility_report_only"
+      }
+    },
+    "kepler.command.status.v1": {
+      "kind": "command",
+      "description": "Read-only status rendering with an explicit write option.",
+      "probe": {
+        "help_contains": "bin/kepler status "
+      },
+      "managed_paths": [
+        "bin/kepler",
+        "lib/kepler/cli.rb",
+        "lib/kepler/doctor.rb"
+      ],
+      "fallback": {
+        "mode": "compatibility_report_only"
+      }
+    },
+    "kepler.command.route-plan.v1": {
+      "kind": "command",
+      "description": "Read-only ownership and dispatch routing plan.",
+      "probe": {
+        "help_contains": "bin/kepler route plan "
+      },
+      "managed_paths": [
+        "bin/kepler",
+        "lib/kepler/cli.rb",
+        "lib/kepler/route_planner.rb"
+      ],
+      "fallback": {
+        "mode": "manual_exact_path_handoff"
+      }
+    },
+    "kepler.command.repo-plan.v1": {
+      "kind": "command",
+      "description": "Read-only repository onboarding plan.",
+      "probe": {
+        "help_contains": "bin/kepler repo plan "
+      },
+      "managed_paths": [
+        "bin/kepler",
+        "lib/kepler/cli.rb",
+        "lib/kepler/repo_planner.rb"
+      ],
+      "fallback": {
+        "mode": "manual_exact_path_handoff"
+      }
+    },
+    "kepler.command.repo-onboard.v1": {
+      "kind": "command",
+      "description": "Explicit repository onboarding apply command.",
+      "probe": {
+        "help_contains": "bin/kepler repo onboard "
+      },
+      "managed_paths": [
+        "bin/kepler",
+        "lib/kepler/cli.rb",
+        "lib/kepler/repository_store.rb"
+      ],
+      "fallback": {
+        "mode": "stop_and_plan_migration"
+      }
+    },
+    "kepler.command.bridge-plan.v1": {
+      "kind": "command",
+      "description": "Read-only bridge installation or drift plan.",
+      "probe": {
+        "help_contains": "bin/kepler bridge plan "
+      },
+      "managed_paths": [
+        "bin/kepler",
+        "lib/kepler/bridge_bulk_store.rb",
+        "lib/kepler/bridge_store.rb",
+        "lib/kepler/cli.rb"
+      ],
+      "fallback": {
+        "mode": "manual_exact_path_handoff"
+      }
+    },
+    "kepler.command.bridge-install.v1": {
+      "kind": "command",
+      "description": "Explicit bridge installation apply command.",
+      "probe": {
+        "help_contains": "bin/kepler bridge install "
+      },
+      "managed_paths": [
+        "bin/kepler",
+        "lib/kepler/bridge_bulk_store.rb",
+        "lib/kepler/bridge_store.rb",
+        "lib/kepler/cli.rb"
+      ],
+      "fallback": {
+        "mode": "stop_and_plan_migration"
+      }
+    },
+    "kepler.command.setup-plan.v1": {
+      "kind": "command",
+      "description": "Read-only discovery and repository-connection preview.",
+      "probe": {
+        "help_contains": "bin/kepler setup plan "
+      },
+      "managed_paths": [
+        "bin/kepler",
+        "lib/kepler/cli.rb",
+        "lib/kepler/setup_store.rb"
+      ],
+      "fallback": {
+        "mode": "stop_and_plan_migration"
+      }
+    },
+    "kepler.command.setup-connect.v1": {
+      "kind": "command",
+      "description": "Explicit repository discovery, declaration, and safe bridge apply command.",
+      "probe": {
+        "help_contains": "bin/kepler setup connect "
+      },
+      "managed_paths": [
+        "bin/kepler",
+        "lib/kepler/cli.rb",
+        "lib/kepler/setup_store.rb"
+      ],
+      "fallback": {
+        "mode": "stop_and_plan_migration"
+      }
+    },
+    "kepler.document.thread-routing.v1": {
+      "kind": "document",
+      "description": "Owner routing and no-monitoring coordination contract.",
+      "probe": {
+        "path": "docs/workflows/thread-routing.md"
+      },
+      "managed_paths": [
+        "docs/workflows/thread-routing.md"
+      ],
+      "fallback": {
+        "mode": "bundled_reference",
+        "reference": "skills/kepler/references/dispatch.md"
+      }
+    },
+    "kepler.document.change-review.v1": {
+      "kind": "document",
+      "description": "Hub-local findings-first change-review workflow.",
+      "probe": {
+        "path": "docs/review/change-review.md"
+      },
+      "managed_paths": [
+        "docs/review/change-review.md"
+      ],
+      "fallback": {
+        "mode": "bundled_reference",
+        "reference": "skills/kepler-review/references/review-method.md"
+      }
+    },
+    "kepler.document.plugin-lifecycle.v1": {
+      "kind": "document",
+      "description": "Generated-Hub preservation and plugin lifecycle contract.",
+      "probe": {
+        "path": "docs/workflows/plugin-lifecycle.md"
+      },
+      "managed_paths": [
+        "docs/workflows/plugin-lifecycle.md"
+      ],
+      "fallback": {
+        "mode": "bundled_reference",
+        "reference": "skills/kepler-upgrade/references/upgrade-contract.md"
+      }
+    }
+  }
+}

@@ -1,6 +1,6 @@
-# Flightdeck plugin contributor instructions
+# Kepler plugin contributor instructions
 
-This repository owns one portable Codex plugin under `plugins/flightdeck/` and a
+This repository owns one portable Codex plugin under `plugins/kepler/` and a
 repo-local marketplace entry under `.agents/plugins/`.
 
 ## Boundaries
@@ -11,7 +11,7 @@ repo-local marketplace entry under `.agents/plugins/`.
 - Do not install, activate, publish, share, stage, commit, push, create a remote,
   or change a plugin cache unless the user explicitly authorizes that action.
 - Treat any external source Hub supplied for comparison as read-only. Store
-  path-bearing comparison output only under ignored `.flightdeck-local/`.
+  path-bearing comparison output only under ignored `.kepler-local/`.
 - Do not add a license. This public source-available distribution intentionally
   does not include one.
 

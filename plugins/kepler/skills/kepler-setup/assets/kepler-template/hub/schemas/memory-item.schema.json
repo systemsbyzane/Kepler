@@ -1,0 +1,34 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kepler.dev/schemas/memory-item.schema.json",
+  "title": "Kepler MemoryItem",
+  "type": "object",
+  "required": ["api_version", "kind", "metadata", "scope", "type", "statement", "source"],
+  "properties": {
+    "api_version": {"const": "kepler.dev/v1"},
+    "kind": {"const": "MemoryItem"},
+    "metadata": {"type": "object", "required": ["id"], "properties": {"id": {"type": "string", "minLength": 1}, "created_at": {"type": "string", "format": "date-time"}, "updated_at": {"type": "string", "format": "date-time"}}},
+    "scope": {"enum": ["SYSTEM", "WORKSPACE", "DOMAIN", "WORK"]},
+    "type": {"enum": ["FACT", "DECISION", "CONSTRAINT", "ATTEMPT", "RELATIONSHIP", "ARTIFACT", "SUMMARY"]},
+    "statement": {"type": "string", "minLength": 1},
+    "source": {"type": "string", "minLength": 1},
+    "workspace": {"type": "string"},
+    "domain": {"type": "string"},
+    "confidence": {"type": "number", "minimum": 0, "maximum": 1},
+    "importance": {"type": "integer"},
+    "expires_at": {"type": "string", "format": "date-time"},
+    "invalidated": {"type": "boolean"},
+    "supersedes": {"oneOf": [{"type": "string"}, {"type": "array", "items": {"type": "string"}}]},
+    "superseded_by": {"type": "string"}
+  },
+  "allOf": [
+    {
+      "if": {"properties": {"scope": {"const": "WORKSPACE"}}},
+      "then": {"required": ["workspace"]}
+    },
+    {
+      "if": {"properties": {"scope": {"enum": ["DOMAIN", "WORK"]}}},
+      "then": {"required": ["workspace", "domain"]}
+    }
+  ]
+}

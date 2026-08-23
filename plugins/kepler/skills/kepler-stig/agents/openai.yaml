@@ -1,0 +1,6 @@
+interface:
+  display_name: "Kepler STIG"
+  short_description: "Evaluate STIG evidence and CKL readiness"
+  default_prompt: "Use $kepler-stig to evaluate this STIG request at the right depth and identify evidence or remediation gaps."
+policy:
+  allow_implicit_invocation: true

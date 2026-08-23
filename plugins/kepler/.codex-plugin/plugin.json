@@ -1,0 +1,43 @@
+{
+  "name": "kepler",
+  "version": "1.0.0",
+  "description": "Plan and dispatch context-aware engineering work across existing Codex projects, with structured results and scoped memory.",
+  "author": {
+    "name": "Kepler Maintainers",
+    "url": "https://github.com/systemsbyzane/kepler"
+  },
+  "homepage": "https://github.com/systemsbyzane/kepler#readme",
+  "repository": "https://github.com/systemsbyzane/kepler",
+  "keywords": [
+    "codex",
+    "coordination",
+    "multi-repository",
+    "project-routing",
+    "workflow"
+  ],
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "Kepler",
+    "shortDescription": "Portable multi-project engineering coordination",
+    "longDescription": "Creates a Kepler control project with a confirmed architecture map, revisioned Plans, budgeted ContextPacks, exact one-shot worker dispatch, structured WorkerResults, scoped memory, read-only Doctor checks, and focused engineering workflows while keeping repositories and workers in normal Codex projects.",
+    "developerName": "Kepler Maintainers",
+    "category": "Developer Tools",
+    "websiteURL": "https://github.com/systemsbyzane/kepler",
+    "capabilities": [
+      "Interactive",
+      "Read",
+      "Write"
+    ],
+    "defaultPrompt": [
+      "/kepler setup: connect my existing Codex projects and propose an architecture map.",
+      "/kepler plan: turn this engineering outcome into a revisioned cross-domain Plan.",
+      "/kepler status: show workers, evidence, blockers, and newly ready units."
+    ],
+    "brandColor": "#0A1829",
+    "composerIcon": "./assets/kepler-icon.png",
+    "logo": "./assets/kepler-icon.png",
+    "screenshots": [
+      "./assets/kepler-routing.png"
+    ]
+  }
+}

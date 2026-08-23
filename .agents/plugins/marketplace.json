@@ -1,14 +1,14 @@
 {
-  "name": "flightdeck-team",
+  "name": "kepler-team",
   "interface": {
-    "displayName": "Flightdeck Team"
+    "displayName": "Kepler Team"
   },
   "plugins": [
     {
-      "name": "flightdeck",
+      "name": "kepler",
       "source": {
         "source": "local",
-        "path": "./plugins/flightdeck"
+        "path": "./plugins/kepler"
       },
       "policy": {
         "installation": "AVAILABLE",

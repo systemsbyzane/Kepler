@@ -1,14 +1,14 @@
 PYTHON ?= python3
 RUBY ?= ruby
 
-PLUGIN := plugins/flightdeck
-SETUP := $(PLUGIN)/skills/flightdeck-setup
-TEMPLATE := $(SETUP)/assets/flightdeck-template
+PLUGIN := plugins/kepler
+SETUP := $(PLUGIN)/skills/kepler-setup
+TEMPLATE := $(SETUP)/assets/kepler-template
 CODEX_SKILLS_ROOT ?= $(shell $(PYTHON) -c 'from pathlib import Path; print(Path.home()/".codex"/"skills")')
 PLUGIN_VALIDATOR := $(CODEX_SKILLS_ROOT)/.system/plugin-creator/scripts/validate_plugin.py
 SKILL_VALIDATOR := $(CODEX_SKILLS_ROOT)/.system/skill-creator/scripts/quick_validate.py
-LOCAL_EVIDENCE ?= $(CURDIR)/.flightdeck-local/validation/current
-GENERATED_HUB ?= $(LOCAL_EVIDENCE)/generated-flightdeck
+LOCAL_EVIDENCE ?= $(CURDIR)/.kepler-local/validation/current
+GENERATED_HUB ?= $(LOCAL_EVIDENCE)/generated-kepler
 SOURCE_HUB ?=
 SOURCE_HUB_SKILL ?=
 SOURCE_STIG_SKILL ?=
@@ -26,20 +26,20 @@ endif
 	acceptance debranding fresh-hub full-local links marketplace-validate \
 	plugin-validate preflight process-inventory process-inventory-source \
 	private-neutralization-required release-validate ruby-tests \
-	semantic-parity-local skills-validate structured \
+	semantic-parity-local skills-validate stale-names structured \
 	test validate
 
 test: ruby-tests
 	$(PYTHON) -m unittest discover -s $(SETUP)/tests -p 'test_*.py' -v
-	$(PYTHON) -m unittest discover -s $(PLUGIN)/skills/flightdeck-artifacts/tests -p 'test_*.py' -v
-	$(PYTHON) -m unittest discover -s $(PLUGIN)/skills/flightdeck-stig/tests -p 'test_*.py' -v
-	$(PYTHON) -m unittest discover -s $(PLUGIN)/skills/flightdeck-upgrade/tests -p 'test_*.py' -v
+	$(PYTHON) -m unittest discover -s $(PLUGIN)/skills/kepler-artifacts/tests -p 'test_*.py' -v
+	$(PYTHON) -m unittest discover -s $(PLUGIN)/skills/kepler-stig/tests -p 'test_*.py' -v
+	$(PYTHON) -m unittest discover -s $(PLUGIN)/skills/kepler-upgrade/tests -p 'test_*.py' -v
 
 plugin-validate:
 	$(PYTHON) $(PLUGIN_VALIDATOR) $(PLUGIN)
 
 marketplace-validate:
-	$(PYTHON) -c 'import json, pathlib; p=pathlib.Path(".agents/plugins/marketplace.json"); d=json.loads(p.read_text()); e=d["plugins"][0]; assert d["name"]=="flightdeck-team"; assert e["name"]=="flightdeck"; assert e["source"]=={"source":"local","path":"./plugins/flightdeck"}; assert e["policy"]["installation"] in {"NOT_AVAILABLE","AVAILABLE","INSTALLED_BY_DEFAULT"}; assert e["policy"]["authentication"] in {"ON_INSTALL","ON_USE"}; assert isinstance(e["category"],str) and e["category"]'
+	$(PYTHON) -c 'import json, pathlib; p=pathlib.Path(".agents/plugins/marketplace.json"); d=json.loads(p.read_text()); e=d["plugins"][0]; assert d["name"]=="kepler-team"; assert e["name"]=="kepler"; assert e["source"]=={"source":"local","path":"./plugins/kepler"}; assert e["policy"]["installation"] in {"NOT_AVAILABLE","AVAILABLE","INSTALLED_BY_DEFAULT"}; assert e["policy"]["authentication"] in {"ON_INSTALL","ON_USE"}; assert isinstance(e["category"],str) and e["category"]'
 
 skills-validate:
 	@for skill in $(PLUGIN)/skills/*; do \
@@ -50,7 +50,7 @@ structured:
 	$(PYTHON) $(SETUP)/scripts/validate_structured.py .
 
 ruby-tests:
-	$(RUBY) -I$(TEMPLATE)/lib $(TEMPLATE)/tests/flightdeck_test.rb
+	$(RUBY) -I$(TEMPLATE)/lib $(TEMPLATE)/tests/kepler_test.rb
 
 preflight:
 	$(PYTHON) $(SETUP)/scripts/preflight.py --json
@@ -61,6 +61,9 @@ links:
 debranding:
 	$(PYTHON) $(SETUP)/scripts/scan_debranding.py . \
 		$(if $(PRIVATE_NEUTRALIZATION_MAP),--private-neutralization-map "$(PRIVATE_NEUTRALIZATION_MAP)")
+
+stale-names:
+	$(PYTHON) $(SETUP)/scripts/scan_stale_names.py .
 
 fresh-hub:
 	$(PYTHON) $(SETUP)/scripts/bootstrap.py --target "$(GENERATED_HUB)" --apply --json
@@ -86,7 +89,7 @@ process-inventory-source:
 		--plugin "$(CURDIR)/$(PLUGIN)" \
 		--json "$(LOCAL_EVIDENCE)/process-inventory-source.json"
 
-validate: plugin-validate marketplace-validate skills-validate structured test preflight links debranding fresh-hub acceptance process-inventory
+validate: plugin-validate marketplace-validate skills-validate structured test preflight links debranding stale-names fresh-hub acceptance process-inventory
 
 semantic-parity-local:
 	@test -n "$(SOURCE_HUB)" || { echo "SOURCE_HUB is required"; exit 2; }

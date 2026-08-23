@@ -1,7 +1,7 @@
 # Public repository and plugin readiness
 
 The repository is publicly readable and can serve the plugin directly through
-Codex's Git marketplace support. A Flightdeck version is release-ready only
+Codex's Git marketplace support. A Kepler version is release-ready only
 when every mandatory item below is satisfied.
 
 ## Portable content
@@ -50,7 +50,7 @@ when every mandatory item below is satisfied.
 After installation, execute the setup skill's
 `references/installed-acceptance.md` in a fresh task. Require live exact-path
 project verification and a real create/resume dispatch receipt. Confirm the Hub
-stops without monitoring. Evidence must match the current Flightdeck runtime
+stops without monitoring. Evidence must match the current Kepler runtime
 schema, plugin version, candidate root, and preserved synthetic Hub; stale
 predecessor evidence is invalid. Local tests cannot satisfy these checks.
 
@@ -81,7 +81,7 @@ Run the source-backed local gate with:
 ```sh
 make release-validate \
   SOURCE_HUB=/absolute/path/to/read-only-reference-hub \
-  PRIVATE_NEUTRALIZATION_MAP=.flightdeck-local/private-neutralization.json
+  PRIVATE_NEUTRALIZATION_MAP=.kepler-local/private-neutralization.json
 ```
 
 `make validate` remains the self-contained plugin/candidate suite; it cannot
