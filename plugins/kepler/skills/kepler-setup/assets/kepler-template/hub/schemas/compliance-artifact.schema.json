@@ -1,0 +1,115 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kepler.dev/schemas/compliance-artifact.schema.json",
+  "title": "Kepler Compliance Working Record",
+  "type": "object",
+  "additionalProperties": true,
+  "required": [
+    "schema_version",
+    "record_id",
+    "record_type",
+    "program",
+    "document_path",
+    "status",
+    "sensitivity",
+    "inputs",
+    "document_updates",
+    "claims",
+    "evidence_refs",
+    "open_actions"
+  ],
+  "properties": {
+    "schema_version": {"const": "2.0"},
+    "record_id": {"$ref": "#/$defs/id"},
+    "record_type": {
+      "enum": [
+        "control_workbook",
+        "control_assessment",
+        "poam_analysis",
+        "policy",
+        "evidence_index",
+        "risk_summary",
+        "package_note"
+      ]
+    },
+    "program": {"type": "string", "minLength": 1},
+    "document_path": {"$ref": "#/$defs/relativePath"},
+    "prepared_at": {"type": "string", "format": "date-time"},
+    "status": {"const": "unsubmitted"},
+    "sensitivity": {"type": "string", "minLength": 1},
+    "inputs": {
+      "type": "array",
+      "items": {"$ref": "#/$defs/input"}
+    },
+    "document_updates": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["fields_authored", "fields_not_completed"],
+      "properties": {
+        "fields_authored": {"type": "array", "items": {"type": "string"}},
+        "fields_not_completed": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["field", "reason"],
+            "properties": {
+              "field": {"type": "string", "minLength": 1},
+              "reason": {"type": "string", "minLength": 1}
+            }
+          }
+        }
+      }
+    },
+    "claims": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["supported_facts", "reasonable_inferences", "assumptions", "gaps"],
+      "properties": {
+        "supported_facts": {"type": "array", "items": {"type": "object"}},
+        "reasonable_inferences": {"type": "array", "items": {"type": "object"}},
+        "assumptions": {"type": "array", "items": {"type": "string"}},
+        "gaps": {"type": "array", "items": {"type": "string"}}
+      }
+    },
+    "evidence_refs": {
+      "type": "array",
+      "items": {"$ref": "#/$defs/evidence"}
+    },
+    "open_actions": {"type": "array", "items": {"type": "string", "minLength": 1}}
+  },
+  "$defs": {
+    "id": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9](?:[A-Za-z0-9._-]*[A-Za-z0-9])?$"
+    },
+    "relativePath": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^(?!/)(?!.*(?:^|/)\\.\\.(?:/|$)).+$"
+    },
+    "input": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "type"],
+      "properties": {
+        "path": {"$ref": "#/$defs/relativePath"},
+        "type": {"type": "string", "minLength": 1},
+        "location": {"type": "string"}
+      }
+    },
+    "evidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["evidence_id", "path", "tier"],
+      "properties": {
+        "evidence_id": {"$ref": "#/$defs/id"},
+        "path": {"$ref": "#/$defs/relativePath"},
+        "location": {"type": "string"},
+        "tier": {
+          "enum": ["direct_current", "direct_stale", "indirect", "assertion", "conflict"]
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,4 @@
+interface:
+  display_name: "Kepler Setup"
+  short_description: "Set up Kepler and connect local repositories"
+  default_prompt: "Set up Kepler for the Git repositories under this folder, add safe local bridges, validate it, and tell me only what needs my attention."

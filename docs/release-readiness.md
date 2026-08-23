@@ -1,7 +1,7 @@
 # Public repository and plugin readiness
 
 The repository is publicly readable and can serve the plugin directly through
-Codex's Git marketplace support. A Flightdeck version is release-ready only
+Codex's Git marketplace support. A Kepler version is release-ready only
 when every mandatory item below is satisfied.
 
 ## Portable content
@@ -24,29 +24,6 @@ when every mandatory item below is satisfied.
 - Doctor, status, route plan, repo plan, onboarding, bridge modes, declarative
   bulk bridge planning/application, per-repository receipts, compliance
   sidecars, automation safety, and no-monitoring behavior pass local probes;
-- ordinary dispatch remains receipt-and-stop by default and creates no Mission;
-  explicit Mission records support `dispatch_only`, `watch_only`, and
-  `supervised` without widening the recorded authorization boundary;
-- generated-Hub Mission tests cover durable state, exact project/host/task and
-  pending-client identity, 1/8/9/16 and bounded high-count waits, cursor replay,
-  unchanged timeout, completion-before-wait, interruption, per-target host
-  errors, required/optional fan-in, cycles, same-checkout conflicts, two-phase
-  crash replay, concurrent supervisors, action/retry/duration/forwarded-size
-  budgets, capability/schema drift, core-derived authorized-target boundaries,
-  criterion assignment/disposition/coverage, generation-bound sync plan tokens,
-  closed child output declarations, exact-receipt core materialization of
-  canonical producer provenance and event digests, transported-artifact resolver
-  direction, tamper/replay rejection, JIT `awaiting_handoff` receipts,
-  prepared pending/unknown preservation without duplicate create, strict
-  complete-parent/type-compatible non-root dispatch, terminal-evidence
-  exclusion, blocked/stale non-actionability, and operator-only close;
-- child titles, summaries, commentary, free text, secrets, and raw evidence are
-  never persisted or interpreted as authority; children emit only closed
-  bounded declarations and supervised handoffs contain only refs materialized
-  by core from the exact producer receipt;
-- compliance, patching, development, CI/CD, platform/runtime, research, and
-  DOCX/PDF/XLSX Mission scenarios exercise their owning companion skills,
-  output envelopes, and denied external actions using synthetic data only;
 - setup generation is atomic, non-merging, idempotent, and fail-closed;
 - the preview-first bootstrap refuses unmanaged or managed-template-drifting
   targets, preserves valid configured topology and repository declarations, and
@@ -73,24 +50,9 @@ when every mandatory item below is satisfied.
 After installation, execute the setup skill's
 `references/installed-acceptance.md` in a fresh task. Require live exact-path
 project verification and a real create/resume dispatch receipt. Confirm the Hub
-stops without monitoring. Evidence must match the current Flightdeck runtime
+stops without monitoring. Evidence must match the current Kepler runtime
 schema, plugin version, candidate root, and preserved synthetic Hub; stale
 predecessor evidence is invalid. Local tests cannot satisfy these checks.
-
-Installed Mission acceptance separately proves the unchanged ordinary
-dispatch path, then opts in to fresh `watch_only` and `supervised` Missions.
-It must record real task/host/project identities, pending create outcomes,
-batched waits and cursors, criterion coverage/results, producer provenance,
-resolver direction and tamper rejection, dependency handoffs, child-authored
-canonical-ref rejection, prepared client-only/unknown preservation without
-duplicate create, strict non-root dispatch eligibility, terminal-evidence
-exclusion, blocked/stale non-actionability, restart/replay,
-and explicit operator close without persisting child free text or executing an
-external action. Injected local observations and generated-Hub CLI results are source
-evidence only, not installed-runtime evidence. Use the backward-compatible
-exact-three v1 evidence only for the direct-dispatch contract; a Mission-ready
-release requires v2 with the same three results plus exact results for default
-dispatch, watch-only synchronization, supervised fan-in, and operator closure.
 
 An installed plugin-upgrade check is also runtime acceptance. With explicit
 authorization, record the exact prior and target versions, marketplace source,
@@ -114,22 +76,12 @@ Do not claim plugin readiness while any mandatory local probe is unresolved or
 runtime acceptance remains unexecuted. Public GitHub availability and
 successful source installation do not replace those acceptance checks.
 
-Run the self-contained public gate with:
-
-```sh
-make public-validate
-```
-
-This gate intentionally uses only repository-owned validation surfaces. It is
-suitable for a clean public CI runner, but it does not substitute for the
-system plugin/skill validators, private source parity, or installed acceptance.
-
 Run the source-backed local gate with:
 
 ```sh
 make release-validate \
   SOURCE_HUB=/absolute/path/to/read-only-reference-hub \
-  PRIVATE_NEUTRALIZATION_MAP=.flightdeck-local/private-neutralization.json
+  PRIVATE_NEUTRALIZATION_MAP=.kepler-local/private-neutralization.json
 ```
 
 `make validate` remains the self-contained plugin/candidate suite; it cannot

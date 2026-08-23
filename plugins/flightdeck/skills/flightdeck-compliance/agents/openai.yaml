@@ -1,4 +1,0 @@
-interface:
-  display_name: "Flightdeck Compliance"
-  short_description: "Prepare professional compliance artifacts"
-  default_prompt: "Use $flightdeck-compliance to prepare professional evidence-backed artifacts without inventing claims or exposing authoring-process metadata."

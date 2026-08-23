@@ -1,0 +1,4 @@
+interface:
+  display_name: "Kepler Development"
+  short_description: "Coordinate secure application development"
+  default_prompt: "Use $kepler-development to scope and dispatch this implementation to its owning repository."

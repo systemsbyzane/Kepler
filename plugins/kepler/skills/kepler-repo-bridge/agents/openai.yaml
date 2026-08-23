@@ -1,0 +1,4 @@
+interface:
+  display_name: "Kepler Repo Bridge"
+  short_description: "Configure safe repository policy bridges"
+  default_prompt: "Use $kepler-repo-bridge to configure declared bridges and verify saved projects by exact path with separate logical and runtime IDs."

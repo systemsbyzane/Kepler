@@ -1,0 +1,4 @@
+interface:
+  display_name: "Kepler Artifacts"
+  short_description: "Produce polished DOCX PDF and XLSX files"
+  default_prompt: "Use $kepler-artifacts to route this artifact through its installed capability, visual checks, and professional deliverable validation."

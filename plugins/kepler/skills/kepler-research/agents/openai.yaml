@@ -1,0 +1,4 @@
+interface:
+  display_name: "Kepler Research"
+  short_description: "Run evidence-led technical research"
+  default_prompt: "Use $kepler-research to produce a source-ledger-backed decision brief."

@@ -1,0 +1,4 @@
+interface:
+  display_name: "Kepler Doctor"
+  short_description: "Inspect Kepler health and drift"
+  default_prompt: "Use $kepler-doctor to run a read-only health check and summarize actionable findings."

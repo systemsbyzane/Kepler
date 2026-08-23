@@ -1,0 +1,4 @@
+api_version: kepler.dev/v1alpha1
+kind: RepositoryDeclarations
+schema: hub/schemas/repository-declarations.schema.json
+repositories: []

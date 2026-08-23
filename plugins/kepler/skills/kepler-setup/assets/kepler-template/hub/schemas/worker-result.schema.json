@@ -1,0 +1,24 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kepler.dev/schemas/worker-result.schema.json",
+  "title": "Kepler WorkerResult",
+  "type": "object",
+  "required": ["api_version", "kind", "metadata", "status", "summary", "validation"],
+  "properties": {
+    "api_version": {"const": "kepler.dev/v1"},
+    "kind": {"const": "WorkerResult"},
+    "metadata": {"type": "object", "required": ["id", "plan_id", "plan_revision", "unit_id"], "properties": {"id": {"type": "string"}, "plan_id": {"type": "string"}, "plan_revision": {"type": "integer", "minimum": 1}, "unit_id": {"type": "string"}}},
+    "status": {"enum": ["completed", "blocked", "failed"]},
+    "summary": {"type": "string", "minLength": 1},
+    "validation": {"type": "array"},
+    "changes": {"type": "array"},
+    "discoveries": {"type": "array"},
+    "decisions": {"type": "array"},
+    "failed_attempts": {"type": "array"},
+    "inferences": {"type": "array"},
+    "blockers": {"type": "array"},
+    "handoffs": {"oneOf": [{"type": "object"}, {"type": "array"}]},
+    "artifacts": {"type": "array"},
+    "memory_candidates": {"type": "array"}
+  }
+}

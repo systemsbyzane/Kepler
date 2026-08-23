@@ -1,4 +1,0 @@
-interface:
-  display_name: "Flightdeck Setup"
-  short_description: "Set up Flightdeck and connect local repositories"
-  default_prompt: "Set up Flightdeck for the Git repositories under this folder, add safe local bridges, validate it, and tell me only what needs my attention."

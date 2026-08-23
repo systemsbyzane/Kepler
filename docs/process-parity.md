@@ -1,11 +1,11 @@
 # Strict process parity and exclusions
 
-Flightdeck preserves the reusable operating process of the reference Hub while
+Kepler preserves the reusable operating process of the reference Hub while
 excluding its private operational state. This document is the human-readable
 audit. The machine-enforced mapping is
-[`plugins/flightdeck/process-parity.json`](../plugins/flightdeck/process-parity.json),
+[`plugins/kepler/process-parity.json`](../plugins/kepler/process-parity.json),
 and the deterministic validator is
-[`process_inventory.py`](../plugins/flightdeck/skills/flightdeck-setup/scripts/process_inventory.py).
+[`process_inventory.py`](../plugins/kepler/skills/kepler-setup/scripts/process_inventory.py).
 
 ## Inventory boundary
 
@@ -16,20 +16,15 @@ is therefore the authoritative allowlist. The validator runs the equivalent of:
 git -C <source-root> ls-files -co --exclude-standard
 ```
 
-The current selected baseline is 112 files:
-
-- 100 active substantive process surfaces;
-- 8 structural program-workspace placeholders;
-- 4 reusable design-history plan/spec documents.
-
-All 112 selected files require a mapped or generalized Flightdeck counterpart.
-None may disappear through an exclusion. Any newly selected source path,
+The selected baseline inventory is captured dynamically rather than asserted
+as a hand-maintained count. Every selected reusable source path requires a
+mapped, generalized, or explicitly justified clean-break classification. Any newly selected source path,
 unclassified generated-Hub path, unclassified plugin-distribution path,
 ambiguous mapping, missing candidate, invalid status, duplicate capability ID,
 or count drift fails the strict inventory.
 
 Exact source paths, absolute roots, and source-specific comparison reports are
-written only under ignored `.flightdeck-local/`. The tracked manifest uses
+written only under ignored `.kepler-local/`. The tracked manifest uses
 neutral capability IDs and generalized selectors so distributable content does
 not reveal source identities.
 
@@ -39,7 +34,7 @@ shape:
 
 ```json
 {
-  "schema_version": "flightdeck.private-neutralization/v1",
+  "schema_version": "kepler.private-neutralization/v1",
   "source_control_token": "legacy-fixture-hub",
   "replacements": {
     "private-fixture-product": "product"
@@ -57,20 +52,19 @@ and outside plugin, template, and generated-Hub content.
 
 ## Reusable capability mapping
 
-| Capability | Flightdeck counterpart |
+| Capability | Kepler counterpart |
 |---|---|
 | Distribution boundary | Generated-Hub ignore policy plus de-branding and strict inventory |
 | Coordination entrypoints | Hub `AGENTS.md`, README, Makefile, registry, and CLI |
-| Runtime and regression suite | `lib/flightdeck/`, `bin/flightdeck`, and generated Ruby tests |
-| Workload guidance | Neutral development, charts, patching, research, environment, operations, and compliance roots |
+| Runtime and regression suite | `lib/kepler/`, `bin/kepler`, and generated Ruby tests |
+| Workload guidance | Neutral development, charts, patching, research, environment, and compliance roots |
 | Architecture and workflow method | Generated `docs/` hierarchy, including the guide index and Codex UI workflow |
-| Design history | Neutral control-plane and compliance workbench plans/specifications under `docs/superpowers/` |
-| Task and workflow contracts | Schemas, typed adapters, gates, approvals, checks, evidence, risk, and lifecycle history |
+| Design history | Neutral coordination-layer and compliance workbench plans/specifications under `docs/superpowers/` |
+| Legacy task and workflow contracts | Explicit clean-break migration evidence; Kepler v1 uses Plan, ContextPack, DispatchReceipt, and WorkerResult contracts instead |
 | Repository onboarding | Provider-aware planning, verified clone/existing-local adapters, and atomic ignored registry updates |
 | Project identity and dispatch | Exact normalized path verification, separate logical/runtime IDs, search/resume-before-create, receipt, and no monitoring |
-| Mission coordination | Opt-in durable parent records, default dispatch compatibility, three supervision modes, exact authorized targets and task/host/project identity, criterion-accountable DAG fan-in, compact producer-bound references, plan-token-bound synchronization, replay-safe two-phase actions, and operator-only close |
 | Repository bridges | Reference, materialized, and repo-native modes; read-only bulk plan; fail-closed apply; per-repository receipts |
-| Doctor and operations | Stable finding codes, no-fetch repository state, task/schema checks, bridge integrity, sidecar checks, and disabled automation policy |
+| Doctor and coordination | Stable finding codes, no-fetch repository state, ArchitectureMap/Plan contract checks, bridge integrity, sidecar checks, and disabled automation policy |
 | Automation patterns | Disabled YAML specifications plus a separate approval-gated real-schedule method |
 | Development and charts | Owner dispatch, secure design/review gates, manifest rendering, and rollback evidence |
 | Patching | Ownership, compatibility contracts, scans, rebuild evidence, immutable digests, SBOMs, and downstream validation |
@@ -81,10 +75,12 @@ and outside plugin, template, and generated-Hub content.
 | Setup | Preview-first credential-free bootstrap, atomic empty-target generation, idempotent validation-only reruns, and exact project registration |
 | Plugin lifecycle | Exact installed/target version planning, deterministic release notes, supported same-plugin reinstall, preservation checks, and explicit separation from generated-Hub migration |
 
-Semantic parity remains a second gate. The strict inventory proves that every
-surface is classified and present; `compare_hubs.py` separately probes schema,
-workflow, CLI, Doctor, bridge, task, Mission, artifact, STIG, documentation,
-de-branding, and local acceptance behavior.
+Semantic parity remains a second gate. The strict distribution inventory proves
+that every shipped candidate and plugin surface is classified and present;
+`compare_hubs.py` separately probes the new coordination contracts, CLI,
+Doctor, bridges, planning, artifacts, STIG, documentation, de-branding, and
+local acceptance behavior while retaining historical migration evidence for
+the removed lifecycle.
 
 ## Required exclusions
 
@@ -105,37 +101,22 @@ not functional parity gaps:
 - risk acceptance, authorization decisions, submission receipts, and closure
   claims.
 
-Flightdeck includes the reusable process for handling these classes, not the
+Kepler includes the reusable process for handling these classes, not the
 private instances.
 
 ## Installed-runtime boundary
 
 Local validation can prove generation, schemas, CLI behavior, bridge
-idempotence, transition gates, no-fetch Doctor behavior, de-branding, artifact
-gates, deterministic CKL tools, release-ledger integrity, read-only upgrade
-planning, and generated-Hub Mission state/outbox behavior under synthetic
-injected Codex UI observations. It cannot prove live Codex project
-registration, real task creation/resume/wait/follow-up behavior, restart
-recovery in the installed runtime, or an installed plugin update.
+idempotence, Plan revision/readiness gates, no-fetch Doctor behavior, de-branding, artifact
+gates, deterministic CKL tools, release-ledger integrity, and read-only upgrade
+planning. It cannot prove live Codex project registration, real task
+creation/resume behavior, or an installed plugin update.
 
 Installed runtime evidence remains unresolved unless a fresh task records the
 exact plugin version, current candidate root, a preserved synthetic generated
 Hub, exact-path project match, distinct logical and opaque runtime IDs, bridge
 configuration behavior, task create/resume identity, and confirmation that the
-Hub stopped without monitoring. Mission acceptance additionally proves that an
-explicit fresh Mission loads the installed Mission skill; honors
-`dispatch_only`, `watch_only`, and `supervised`; uses compact batched waits and
-saved cursors; proves criterion coverage, producer provenance, and resolver
-direction; keeps raw child output out of durable state; performs only
-allowlisted exact-receipt dependency handoffs through `awaiting_handoff`;
-preserves prepared pending/unknown receipts without duplicate create; requires
-an exact prepared complete compatible action for non-root dispatch; rejects
-terminal-only starts, child-authored canonical refs, and blocked/stale delivery; survives
-restart/replay; and never treats
-review-ready as operator closure. Stale or cross-plugin evidence must fail.
-The validator preserves the exact-three `flightdeck.runtime-acceptance/v1`
-contract and requires those three plus exactly four Mission results in
-`flightdeck.runtime-acceptance/v2`.
+Hub stopped without monitoring. Stale or cross-plugin evidence must fail.
 Installed upgrade acceptance separately requires explicit authorization,
 before/after exact versions, structured command results, preserved synthetic
 Hub and repository state, and a fresh task that loads the target build.
@@ -145,18 +126,12 @@ Hub and repository state, and a fresh task that loads the target build.
 Write all path-bearing evidence to ignored local state:
 
 ```text
-python3 plugins/flightdeck/skills/flightdeck-setup/scripts/process_inventory.py \
+python3 plugins/kepler/skills/kepler-setup/scripts/process_inventory.py \
   --source <read-only-source-root> \
-  --candidate plugins/flightdeck/skills/flightdeck-setup/assets/flightdeck-template \
-  --plugin plugins/flightdeck \
-  --json .flightdeck-local/parity/process-inventory.json
+  --candidate plugins/kepler/skills/kepler-setup/assets/kepler-template \
+  --plugin plugins/kepler \
+  --json .kepler-local/parity/process-inventory.json
 ```
 
 The report includes source, generated candidate, and plugin file counts,
 classification totals, unresolved items, and deterministic path-list digests.
-
-For a CI-friendly public check that does not require a private source Hub or
-system-installed validators, run `make public-validate`. This proves only the
-source-local synthetic boundary. `make release-validate` remains the stricter
-source-backed parity gate, and installed fresh-task acceptance remains a
-separate release decision.

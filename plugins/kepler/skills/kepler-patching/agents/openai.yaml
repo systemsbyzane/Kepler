@@ -1,0 +1,4 @@
+interface:
+  display_name: "Kepler Patching"
+  short_description: "Patch images without contract regressions"
+  default_prompt: "Use $kepler-patching to plan this patch while preserving downstream runtime contracts."
