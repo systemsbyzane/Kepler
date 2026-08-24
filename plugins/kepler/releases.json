@@ -232,6 +232,20 @@
         "Create a new control project, select existing saved Codex projects by opaque runtime ID and exact path, confirm the ArchitectureMap, and run Doctor.",
         "Do not copy workload lifecycle state, Missions, Operations, transcripts, or Kepler-legacy content into the new control project."
       ]
+    },
+    {
+      "version": "1.1.1",
+      "date": "2026-08-24",
+      "summary": "Same-task Sol planning and review routing.",
+      "changes": [
+        {"category": "fixed", "text": "Kept review-only Plans and Plan revisions in the current task when it already runs Sol with high reasoning, instead of creating a redundant control-project task."},
+        {"category": "changed", "text": "Made planner bootstrap return a no-op reuse receipt for an existing Sol High task unless the user explicitly requests a separate planner."}
+      ],
+      "breaking_changes": [],
+      "migration": [
+        "Start a fresh Codex task after upgrading so the updated planner-routing instructions and MCP tool schema load.",
+        "Existing generated control projects remain valid and are not regenerated automatically."
+      ]
     }
   ]
 }

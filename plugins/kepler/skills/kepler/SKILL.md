@@ -22,7 +22,7 @@ Interpret natural language as the engineering objective and `/kepler` as the req
 - `/kepler plan`: use Sol and `$kepler-plan` to create or revise a `kepler.dev/v1` Plan. Planning may inspect evidence and write control-project Plan/ContextPack artifacts, but cannot edit connected repositories, dispatch, commit, push, open PRs, or deploy.
 - `/kepler dispatch [unit]`: read the current Plan ID/revision, run `bin/kepler dispatch prepare`, and dispatch every selected ready unit through Terra. Never dispatch waiting, ambiguous, or stale-revision work.
 - `/kepler status`: derive state from the Plan, receipts, and WorkerResults. Show dependencies, workers, validation, blockers, and newly ready units; never replay transcripts.
-- `/kepler review`: use `$kepler-review` to create a review-only Plan and lead with findings. Fixes require separate authorization.
+- `/kepler review`: use `$kepler-review` to create a review-only Plan in the current verified Sol task and lead with findings. Do not create another planner task merely because review uses a new Plan. Fixes require separate authorization.
 - `/kepler doctor`: use `$kepler-doctor` for read-only integrity, exact-path, schema, architecture-map, and dispatch-capability checks.
 
 Ordinary conversation may refine an active Plan. Every material change creates a monotonically higher revision with a visible change summary.
@@ -35,14 +35,23 @@ criteria, useful memory, and ContextPack inputs. It may inspect selected
 projects read-only while planning and records requested/effective runtime
 evidence. Sol is not the default implementation worker.
 
-When starting a separate Sol task, require an effective runtime receipt. If the
-normal local task-creation surface cannot return the effective model and
-reasoning level, use `bootstrap_planner_task` with the exact control-project
-path and omit `permission_profile` to inherit the effective global config. It
-hard-binds `gpt-5.6-sol` with high reasoning and creates one empty Local task.
-Send the planning objective only after its receipt matches, then keep all
-planning and Plan persistence in that task. The bootstrap cannot send a prompt,
-edit files, dispatch workers, or monitor the planner.
+Reuse the current task for planning whenever its effective runtime is already
+`gpt-5.6-sol` with high reasoning. This includes `/kepler review`, a new Plan,
+and every Plan revision; role separation does not imply task separation. Do not
+call `bootstrap_planner_task` solely for context isolation or a new planning
+phase.
+
+Start a separate Sol task only when the user explicitly requests one or the
+current task's effective model or reasoning does not satisfy the Sol contract.
+Pass the current effective model and reasoning to `bootstrap_planner_task`; set
+`separate_task_requested` only for the explicit-user-request case. The tool
+returns a no-op reuse receipt when the current task already satisfies the
+contract. When it creates a task, require its effective runtime receipt, use the
+exact control-project path, and omit `permission_profile` to inherit the
+effective global config. Send the planning objective only after the receipt
+matches, then keep all planning and Plan persistence in that task. The
+bootstrap cannot send a prompt, edit files, dispatch workers, or monitor the
+planner.
 
 ## Terra
 

@@ -1,6 +1,6 @@
 {
   "name": "kepler",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "description": "Plan and dispatch context-aware engineering work across existing Codex projects, with structured results and scoped memory.",
   "author": {
     "name": "Kepler Maintainers",

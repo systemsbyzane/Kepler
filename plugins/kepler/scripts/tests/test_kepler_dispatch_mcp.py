@@ -111,14 +111,47 @@ class KeplerDispatchMcpTest(unittest.TestCase):
         result = MODULE.bootstrap_planner_task(
             cwd=str(self.project),
             title="Sol planning task",
+            current_model="gpt-5.6-terra",
+            current_thinking="high",
             codex_executable=str(self.fake_codex),
         )
         self.assertEqual("kepler.planner-task-bootstrap/v1", result["schemaVersion"])
+        self.assertEqual("created-separate-task", result["action"])
+        self.assertTrue(result["created"])
         self.assertEqual("sol", result["role"])
         self.assertEqual("gpt-5.6-sol", result["model"])
         self.assertEqual("high", result["thinking"])
         self.assertEqual("global-config", result["configurationMode"])
         self.assertTrue(result["empty"])
+
+    def test_planner_reuses_current_sol_high_task(self) -> None:
+        result = MODULE.bootstrap_planner_task(
+            cwd=str(self.project),
+            title="Review plan",
+            current_model="gpt-5.6-sol",
+            current_thinking="high",
+            codex_executable=str(self.root / "missing-codex"),
+        )
+        self.assertEqual("kepler.planner-task-reuse/v1", result["schemaVersion"])
+        self.assertEqual("reuse-current-task", result["action"])
+        self.assertFalse(result["created"])
+        self.assertNotIn("threadId", result)
+        self.assertEqual("gpt-5.6-sol", result["model"])
+        self.assertEqual("high", result["thinking"])
+
+    def test_explicit_request_can_create_separate_sol_high_task(self) -> None:
+        result = MODULE.bootstrap_planner_task(
+            cwd=str(self.project),
+            title="Separate review plan",
+            current_model="gpt-5.6-sol",
+            current_thinking="high",
+            separate_task_requested=True,
+            codex_executable=str(self.fake_codex),
+        )
+        self.assertEqual("kepler.planner-task-bootstrap/v1", result["schemaVersion"])
+        self.assertEqual("created-separate-task", result["action"])
+        self.assertTrue(result["created"])
+        self.assertEqual("thread-test", result["threadId"])
 
     def test_tool_schema_cannot_send_prompt_or_select_environment(self) -> None:
         for tool in MODULE.TOOLS:
@@ -129,6 +162,39 @@ class KeplerDispatchMcpTest(unittest.TestCase):
         planner = MODULE.PLANNER_TOOL["inputSchema"]["properties"]
         self.assertNotIn("model", planner)
         self.assertNotIn("thinking", planner)
+        self.assertIn("current_model", planner)
+        self.assertIn("current_thinking", planner)
+        self.assertIn("separate_task_requested", planner)
+        self.assertIn(
+            "current_model", MODULE.PLANNER_TOOL["inputSchema"]["required"]
+        )
+        self.assertIn(
+            "current_thinking", MODULE.PLANNER_TOOL["inputSchema"]["required"]
+        )
+
+    def test_stdio_planner_call_reuses_current_sol_high_task(self) -> None:
+        response = MODULE._handle_request(
+            {
+                "jsonrpc": "2.0",
+                "id": 1,
+                "method": "tools/call",
+                "params": {
+                    "name": "bootstrap_planner_task",
+                    "arguments": {
+                        "cwd": str(self.project),
+                        "title": "Review plan",
+                        "current_model": "gpt-5.6-sol",
+                        "current_thinking": "high",
+                    },
+                },
+            }
+        )
+        assert response is not None
+        receipt = response["result"]["structuredContent"]
+        self.assertEqual("kepler.planner-task-reuse/v1", receipt["schemaVersion"])
+        self.assertEqual("reuse-current-task", receipt["action"])
+        self.assertFalse(receipt["created"])
+        self.assertNotIn("threadId", receipt)
 
     def test_stdio_tool_call_returns_permission_receipt(self) -> None:
         environment = os.environ.copy()

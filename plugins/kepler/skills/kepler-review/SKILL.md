@@ -10,6 +10,10 @@ Kepler control project, represent cross-domain review as a review-only Plan
 whose units cannot implement fixes. Do not fix findings unless the user
 separately authorizes a new implementation Plan.
 
+When the current control task already runs `gpt-5.6-sol` with high reasoning,
+prepare and persist that review-only Plan in the same task. A new review target,
+Plan ID, or revision is not a reason to bootstrap another planner task.
+
 ## Resolve the review target
 
 1. Identify the artifact or Git comparison being reviewed and the question the

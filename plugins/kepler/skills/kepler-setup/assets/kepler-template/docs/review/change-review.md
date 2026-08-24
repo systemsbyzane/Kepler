@@ -12,6 +12,10 @@ Sol may inspect repository-owned evidence read-only while preparing the review
 Plan. Terra dispatches any approved worker unit and returns the receipt without
 monitoring.
 
+When the current control task is already verified as Sol with high reasoning,
+create and persist the review Plan there. Do not create another control task
+solely because review requires a new Plan or revision.
+
 Record the exact pull request, base and candidate SHA, branch comparison,
 working tree, plan, or architecture under review. Do not silently substitute a
 different target.

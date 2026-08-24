@@ -11,11 +11,14 @@ not a source monorepo and does not own or contain their repositories.
 - `/kepler plan` uses Sol on `gpt-5.6-sol`. Sol may inspect selected projects
   read-only while planning. It may write Plan, ContextPack, and scoped memory
   artifacts here, but must not edit a selected project or dispatch work.
+- `/kepler review` creates its review-only Plan in the current task when that
+  task is already verified as Sol with high reasoning. A new review Plan or
+  revision does not create another control-project task.
 - `/kepler dispatch` uses Terra on `gpt-5.6-terra` for exact task creation or
   resume. Terra records requested and effective model evidence, returns the
   receipt, and stops without monitoring.
-- `/kepler status`, `/kepler review`, and `/kepler doctor` read structured
-  state. They do not synchronize or summarize worker transcripts.
+- `/kepler status` and `/kepler doctor` read structured state. They do not
+  synchronize or summarize worker transcripts.
 
 Natural language supplies objectives and refinements. It never substitutes for
 an explicit `/kepler` state-changing command.

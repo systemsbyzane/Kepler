@@ -10,6 +10,11 @@ read-only to identify domains, paths, dependencies, constraints, and success
 criteria. It may write Plan and ContextPack state in the control project but
 must not edit selected projects or dispatch workers.
 
+Reuse the current task when it already has the required Sol runtime. This
+includes a new review-only Plan and later Plan revisions. Create a separate Sol
+task only when the user explicitly requests one or the current task cannot
+satisfy the Sol runtime contract.
+
 ## Dispatch
 
 1. Require an explicit `/kepler dispatch` command, Plan ID, and exact current

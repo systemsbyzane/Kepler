@@ -18,10 +18,12 @@ from typing import Any, Dict, Iterable, Optional
 
 
 SERVER_NAME = "kepler-dispatch"
-SERVER_VERSION = "1.0.0"
+SERVER_VERSION = "1.1.1"
 DEFAULT_TIMEOUT_SECONDS = 20.0
 THINKING_LEVELS = {"low", "medium", "high", "xhigh", "max", "ultra"}
 SAFE_IDENTIFIER = re.compile(r"^[A-Za-z0-9_.:+-]+$")
+SOL_MODEL = "gpt-5.6-sol"
+SOL_THINKING = "high"
 
 
 class DispatchError(RuntimeError):
@@ -307,18 +309,46 @@ def bootstrap_planner_task(
     *,
     cwd: str,
     title: str,
+    current_model: str,
+    current_thinking: str,
+    separate_task_requested: bool = False,
     permission_profile: Optional[str] = None,
     codex_executable: Optional[str] = None,
 ) -> Dict[str, Any]:
+    if not isinstance(separate_task_requested, bool):
+        raise DispatchError("separate_task_requested must be a boolean")
+    current = _validated_inputs(
+        cwd,
+        title,
+        current_model,
+        current_thinking,
+        permission_profile,
+    )
+    if (
+        current["model"] == SOL_MODEL
+        and current["thinking"] == SOL_THINKING
+        and not separate_task_requested
+    ):
+        return {
+            "schemaVersion": "kepler.planner-task-reuse/v1",
+            "action": "reuse-current-task",
+            "created": False,
+            "cwd": current["cwd"],
+            "model": current["model"],
+            "thinking": current["thinking"],
+            "role": "sol",
+        }
     receipt = bootstrap_worker_task(
         cwd=cwd,
         title=title,
-        model="gpt-5.6-sol",
-        thinking="high",
+        model=SOL_MODEL,
+        thinking=SOL_THINKING,
         permission_profile=permission_profile,
         codex_executable=codex_executable,
     )
     receipt["schemaVersion"] = "kepler.planner-task-bootstrap/v1"
+    receipt["action"] = "created-separate-task"
+    receipt["created"] = True
     receipt["role"] = "sol"
     return receipt
 
@@ -354,18 +384,37 @@ WORKER_TOOL = {
 PLANNER_TOOL = {
     "name": "bootstrap_planner_task",
     "description": (
-        "Create one empty persistent local Kepler Sol planning task, hard-bound to "
-        "gpt-5.6-sol with high reasoning, while preserving the effective global "
-        "config or named permission profile. This tool does not send a prompt, "
-        "edit files, dispatch workers, or monitor the task."
+        "Reuse the caller for Kepler planning when it already runs gpt-5.6-sol "
+        "with high reasoning; otherwise create one empty persistent local Sol task "
+        "with that exact runtime while preserving effective configuration. Set "
+        "separate_task_requested only when the user explicitly asks for another "
+        "planning task. This tool does not send a prompt, edit files, dispatch "
+        "workers, or monitor a task."
     ),
     "inputSchema": {
         "type": "object",
         "additionalProperties": False,
-        "required": ["cwd", "title"],
+        "required": ["cwd", "title", "current_model", "current_thinking"],
         "properties": {
             "cwd": {"type": "string", "description": "Exact Kepler control-project path."},
             "title": {"type": "string", "minLength": 1, "maxLength": 200},
+            "current_model": {
+                "type": "string",
+                "minLength": 1,
+                "description": "Effective model of the task calling this tool.",
+            },
+            "current_thinking": {
+                "type": "string",
+                "enum": sorted(THINKING_LEVELS),
+                "description": "Effective reasoning level of the calling task.",
+            },
+            "separate_task_requested": {
+                "type": "boolean",
+                "default": False,
+                "description": (
+                    "True only when the user explicitly requested a separate Sol task."
+                ),
+            },
             "permission_profile": {
                 "type": "string",
                 "description": (
@@ -420,7 +469,14 @@ def _handle_request(message: Dict[str, Any]) -> Optional[Dict[str, Any]]:
             allowed = {"cwd", "title", "model", "thinking", "permission_profile"}
             function = bootstrap_worker_task
         elif tool_name == PLANNER_TOOL["name"]:
-            allowed = {"cwd", "title", "permission_profile"}
+            allowed = {
+                "cwd",
+                "title",
+                "current_model",
+                "current_thinking",
+                "separate_task_requested",
+                "permission_profile",
+            }
             function = bootstrap_planner_task
         else:
             raise DispatchError("unknown tool")
