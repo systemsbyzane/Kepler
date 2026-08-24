@@ -16,6 +16,7 @@
     "workflow"
   ],
   "skills": "./skills/",
+  "mcpServers": "./.mcp.json",
   "interface": {
     "displayName": "Kepler",
     "shortDescription": "Portable multi-project engineering coordination",

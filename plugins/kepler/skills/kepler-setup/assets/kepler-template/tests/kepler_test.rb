@@ -132,6 +132,9 @@ class KeplerTest < Minitest::Test
   def test_setup_plan_selects_live_projects_without_mutation
     with_control do |root, config, directory|
       catalog, alpha, beta = create_catalog(directory)
+      architecture_map_path = File.join(root, "hub", "architecture-map.yaml")
+      architecture_map_before =
+        File.exist?(architecture_map_path) ? File.binread(architecture_map_path) : nil
       before = [Dir.children(alpha), Dir.children(beta), File.read(config.project_registry_path)]
       result = Kepler::SetupStore.new(config).plan(
         project_catalog: catalog,
@@ -143,7 +146,13 @@ class KeplerTest < Minitest::Test
       assert_equal 0, result.dig("bridges", "installed")
       assert_equal false, result.dig("architecture_map", "metadata", "confirmed")
       assert_equal before, [Dir.children(alpha), Dir.children(beta), File.read(config.project_registry_path)]
-      refute File.exist?(File.join(root, "hub", "architecture-map.yaml"))
+      architecture_map_after =
+        File.exist?(architecture_map_path) ? File.binread(architecture_map_path) : nil
+      if architecture_map_before.nil?
+        assert_nil architecture_map_after
+      else
+        assert_equal architecture_map_before, architecture_map_after
+      end
     end
   end
 

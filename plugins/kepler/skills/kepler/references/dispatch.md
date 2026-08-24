@@ -34,6 +34,32 @@ mode, and authorization boundary with `bin/kepler dispatch record`; then
 return the receipts and stop without monitoring. Workers remain ordinary
 Codex tasks and keep the user's or saved project's normal runtime.
 
+## Configuration-preserving local creation
+
+The desktop task-creation surface may omit the caller's named permission
+profile or may silently select a task-specific default. Inspect its current
+schema before creating a worker. When it cannot carry the complete effective
+configuration, use Kepler's `bootstrap_worker_task` tool with the exact project
+path, title, model, and thinking level. Omit `permission_profile` so the tool
+reads and inherits the effective global config for that project path. This
+supports both the current named-profile system and the global
+`sandbox_mode`/`approval_policy` system. Continue only when the receipt reports
+the same effective configuration.
+
+The bootstrap creates one empty persistent Local task. Send the complete worker
+prompt only after the profile receipt passes. If the selected Plan mode is
+Worktree, hand off the empty task to a local Worktree first, then send the
+prompt to the destination task. Never substitute a cloud environment or a
+different approval, sandbox, or permission configuration. The task, handoff,
+and prompt-send responses form
+the dispatch receipt; return it and stop without reading or monitoring the
+worker.
+
+The bootstrap cannot send a prompt, edit files, create a Worktree, delete or
+archive tasks, or monitor a worker. If it is unavailable or rejects the
+effective configuration, fail closed instead of creating a task with weaker or
+different permissions.
+
 Reject a waiting unit, a stale or ambiguous Plan revision, a target that does
 not exactly match the confirmed ArchitectureMap, or a ContextPack over its
 budget. Never silently select the latest revision after dispatch preparation.

@@ -39,10 +39,11 @@ evidence. Sol is not the default implementation worker.
 
 Terra runs on `gpt-5.6-terra` with high reasoning. It receives one approved
 ready unit and its compiled ContextPack, verifies the exact Codex project and
-path, creates or resumes the normal worker, returns the receipt with requested
-and effective runtime fields, records it with `bin/kepler dispatch record`, and
-stops. Terra must not re-plan, invent a target, implement, summarize the
-worker, or monitor it.
+path, creates or resumes the normal local worker with the effective global
+approval and sandbox configuration, returns the receipt with requested
+and effective runtime and configuration fields, records it with
+`bin/kepler dispatch record`, and stops. Terra must not re-plan, invent a
+target, implement, summarize the worker, or monitor it.
 
 Read `references/dispatch.md` before dispatch. Preserve exact-project verification, the selected runtime/mode, and receipt-and-stop behavior.
 

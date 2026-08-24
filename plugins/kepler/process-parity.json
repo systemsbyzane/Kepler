@@ -534,8 +534,12 @@
       "source_count": 0,
       "source_paths": [],
       "candidate_paths": [],
-      "plugin_count": 4,
+      "plugin_count": 8,
       "plugin_paths": [
+        ".mcp.json",
+        "scripts/kepler_dispatch_mcp.py",
+        "scripts/launch_kepler_dispatch_mcp",
+        "scripts/tests/test_kepler_dispatch_mcp.py",
         "skills/kepler/**"
       ],
       "source_mapping_ids": [
