@@ -303,7 +303,27 @@ def bootstrap_worker_task(
         }
 
 
-TOOL = {
+def bootstrap_planner_task(
+    *,
+    cwd: str,
+    title: str,
+    permission_profile: Optional[str] = None,
+    codex_executable: Optional[str] = None,
+) -> Dict[str, Any]:
+    receipt = bootstrap_worker_task(
+        cwd=cwd,
+        title=title,
+        model="gpt-5.6-sol",
+        thinking="high",
+        permission_profile=permission_profile,
+        codex_executable=codex_executable,
+    )
+    receipt["schemaVersion"] = "kepler.planner-task-bootstrap/v1"
+    receipt["role"] = "sol"
+    return receipt
+
+
+WORKER_TOOL = {
     "name": "bootstrap_worker_task",
     "description": (
         "Create one empty persistent local Codex worker task at an exact project path "
@@ -330,6 +350,34 @@ TOOL = {
         },
     },
 }
+
+PLANNER_TOOL = {
+    "name": "bootstrap_planner_task",
+    "description": (
+        "Create one empty persistent local Kepler Sol planning task, hard-bound to "
+        "gpt-5.6-sol with high reasoning, while preserving the effective global "
+        "config or named permission profile. This tool does not send a prompt, "
+        "edit files, dispatch workers, or monitor the task."
+    ),
+    "inputSchema": {
+        "type": "object",
+        "additionalProperties": False,
+        "required": ["cwd", "title"],
+        "properties": {
+            "cwd": {"type": "string", "description": "Exact Kepler control-project path."},
+            "title": {"type": "string", "minLength": 1, "maxLength": 200},
+            "permission_profile": {
+                "type": "string",
+                "description": (
+                    "Optional named profile id. Omit to inherit the effective global "
+                    "config for cwd, including legacy sandbox_mode and approval_policy."
+                ),
+            },
+        },
+    },
+}
+
+TOOLS = (PLANNER_TOOL, WORKER_TOOL)
 
 
 def _mcp_result(payload: Dict[str, Any]) -> Dict[str, Any]:
@@ -359,19 +407,27 @@ def _handle_request(message: Dict[str, Any]) -> Optional[Dict[str, Any]]:
     if method == "ping":
         return {"jsonrpc": "2.0", "id": request_id, "result": {}}
     if method == "tools/list":
-        return {"jsonrpc": "2.0", "id": request_id, "result": {"tools": [TOOL]}}
+        return {"jsonrpc": "2.0", "id": request_id, "result": {"tools": list(TOOLS)}}
     if method == "tools/call":
         params = message.get("params")
-        if not isinstance(params, dict) or params.get("name") != TOOL["name"]:
+        if not isinstance(params, dict):
             raise DispatchError("unknown tool")
+        tool_name = params.get("name")
         arguments = params.get("arguments")
         if not isinstance(arguments, dict):
             raise DispatchError("tool arguments must be an object")
-        allowed = {"cwd", "title", "model", "thinking", "permission_profile"}
+        if tool_name == WORKER_TOOL["name"]:
+            allowed = {"cwd", "title", "model", "thinking", "permission_profile"}
+            function = bootstrap_worker_task
+        elif tool_name == PLANNER_TOOL["name"]:
+            allowed = {"cwd", "title", "permission_profile"}
+            function = bootstrap_planner_task
+        else:
+            raise DispatchError("unknown tool")
         unexpected = set(arguments) - allowed
         if unexpected:
             raise DispatchError("unexpected tool arguments: " + ", ".join(sorted(unexpected)))
-        result = bootstrap_worker_task(**arguments)
+        result = function(**arguments)
         return {"jsonrpc": "2.0", "id": request_id, "result": _mcp_result(result)}
     return {
         "jsonrpc": "2.0",

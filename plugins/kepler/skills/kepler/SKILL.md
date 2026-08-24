@@ -35,6 +35,15 @@ criteria, useful memory, and ContextPack inputs. It may inspect selected
 projects read-only while planning and records requested/effective runtime
 evidence. Sol is not the default implementation worker.
 
+When starting a separate Sol task, require an effective runtime receipt. If the
+normal local task-creation surface cannot return the effective model and
+reasoning level, use `bootstrap_planner_task` with the exact control-project
+path and omit `permission_profile` to inherit the effective global config. It
+hard-binds `gpt-5.6-sol` with high reasoning and creates one empty Local task.
+Send the planning objective only after its receipt matches, then keep all
+planning and Plan persistence in that task. The bootstrap cannot send a prompt,
+edit files, dispatch workers, or monitor the planner.
+
 ## Terra
 
 Terra runs on `gpt-5.6-terra` with high reasoning. It receives one approved

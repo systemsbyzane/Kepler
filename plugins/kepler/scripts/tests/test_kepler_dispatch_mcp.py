@@ -107,11 +107,28 @@ class KeplerDispatchMcpTest(unittest.TestCase):
                 codex_executable=str(self.fake_codex),
             )
 
+    def test_planner_bootstrap_is_hard_bound_and_preserves_config(self) -> None:
+        result = MODULE.bootstrap_planner_task(
+            cwd=str(self.project),
+            title="Sol planning task",
+            codex_executable=str(self.fake_codex),
+        )
+        self.assertEqual("kepler.planner-task-bootstrap/v1", result["schemaVersion"])
+        self.assertEqual("sol", result["role"])
+        self.assertEqual("gpt-5.6-sol", result["model"])
+        self.assertEqual("high", result["thinking"])
+        self.assertEqual("global-config", result["configurationMode"])
+        self.assertTrue(result["empty"])
+
     def test_tool_schema_cannot_send_prompt_or_select_environment(self) -> None:
-        properties = MODULE.TOOL["inputSchema"]["properties"]
-        self.assertNotIn("prompt", properties)
-        self.assertNotIn("environment", properties)
-        self.assertFalse(MODULE.TOOL["inputSchema"]["additionalProperties"])
+        for tool in MODULE.TOOLS:
+            properties = tool["inputSchema"]["properties"]
+            self.assertNotIn("prompt", properties)
+            self.assertNotIn("environment", properties)
+            self.assertFalse(tool["inputSchema"]["additionalProperties"])
+        planner = MODULE.PLANNER_TOOL["inputSchema"]["properties"]
+        self.assertNotIn("model", planner)
+        self.assertNotIn("thinking", planner)
 
     def test_stdio_tool_call_returns_permission_receipt(self) -> None:
         environment = os.environ.copy()
