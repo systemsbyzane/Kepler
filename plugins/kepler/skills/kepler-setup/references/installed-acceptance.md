@@ -19,37 +19,86 @@ Verify the installed enabled record and exact version, then start a fresh task.
 
 ## End-to-end workflow
 
-1. Create or open one `Kepler-Synthetic` control project and ensure two
-   pre-existing saved Codex projects are visible in the live list.
+1. Start a fresh Codex control task inside a named Herdr session and one
+   `Kepler-Synthetic` control workspace. Require `HERDR_ENV=1`, record the
+   session/workspace/task IDs, and ensure two pre-existing saved Codex projects
+   are visible in the live list.
 2. Run `/kepler setup`; select those two exact projects.
 3. Confirm the ArchitectureMap and run `/kepler doctor`.
 4. Prove there was no repository-root prompt or scan, no workload directories
    or pseudo-projects, no bridge requirement, and no selected-project mutation.
 5. Run `/kepler plan` on Sol and persist revision 1. Refine the objective in
-   ordinary conversation and persist revision 2.
+   ordinary conversation and persist revision 2 in the same Sol task. Create a
+   review-only Plan and require the same-task reuse receipt rather than another
+   control-project task.
 6. Attempt revision-1 dispatch and require stale-revision rejection.
-7. Run `/kepler dispatch` for revision 2. Require Terra task creation/resume
-   with requested and effective `gpt-5.6-terra` plus reasoning evidence.
+7. Capture the live control-project task list, then run `/kepler dispatch` for
+   revision 2 in the same Sol control task. Require no new or resumed
+   control-project dispatcher task. Require every new worker to use
+   `bootstrap_worker_task` with the owning opaque runtime project ID, require
+   its returned expected and actual project IDs to match, verify the exact final
+   task with `verify_worker_task` before its prompt, and record requested/effective
+   `gpt-5.6-terra`, reasoning, approval, sandbox or permission-profile, path,
+   empty pre-prompt evidence, and exact ContextPack token accounting. Before
+   prompt delivery, require the live worker `projectId` to equal the owning
+   saved project ID and the task path to equal the verified Local or Worktree
+   path. Deliver only through the project-preserving Codex task-message
+   surface; collaboration-agent spawn, delegation, or resume fails acceptance.
+   Recheck the same task with `verify_worker_task` using `require_empty: false`
+   immediately after delivery and require its returned `empty: false`, actual
+   project ID, and live project association in the DispatchReceipt. Require
+   the serialized ContextPack exactly once; direct prompted creation or
+   duplicated Plan/ContextPack prose fails acceptance.
+   Between pre-prompt verification and prompt delivery, call
+   `attach_herdr_worker`. Require one background workspace at the exact worker
+   path, one Codex agent whose detected session ID equals the final task ID,
+   and a strict owned attachment in the DispatchReceipt. The prompt must still
+   use the project-preserving Codex task-message surface; a separate
+   terminal-created task fails acceptance.
 8. Verify Sol used requested/effective `gpt-5.6-sol` evidence and performed
    read-only planning inspection only.
 9. Open the ordinary worker directly. Verify its ContextPack contains
-   provenance and says initial context is not an exclusive boundary.
+   provenance, only direct dependency-edge related work, the compact
+   WorkerResult budget, and says initial context is not an exclusive boundary.
 10. Return a structured WorkerResult, ingest it, run `/kepler status`, and
-    dispatch the next newly ready unit.
-11. Repeat the exact objective to prove matching worker resume; use a distinct
-    objective to prove create. Require receipt-and-stop with no monitoring.
-12. Verify no worker transcript was copied or synchronized.
+    dispatch the next newly ready unit. Repeat the same ingestion and require
+    an unchanged idempotent result. Status must report ContextPack and
+    WorkerResult artifact estimates, label runtime token usage unavailable, and
+    create no planner task.
+11. Repeat the exact objective to prove matching worker resume through the
+    project-preserving task-message surface; use a distinct objective to prove
+    create. Require the same owning project ID before and after both paths,
+    current-control-task receipt-and-stop, and no monitoring.
+12. Verify no worker transcript was copied or synchronized and that Herdr
+    lifecycle state alone never advanced a unit.
+13. After every selected unit has a terminal WorkerResult, run
+    `bin/kepler cleanup prepare` from the exact Plan revision. First prove a
+    working or blocked worker is refused without mutation. Then clean an idle
+    attached worker and require the exact owned Herdr workspace to close, the
+    same Codex task to become archived, and the control workspace/task to
+    remain. For a Worktree, prove dirty and unmerged states are refused; after
+    it is clean and contained by the owning checkout HEAD, require checkout
+    removal with the branch and all structured artifacts preserved. Record the
+    exact CleanupReceipt and prove an identical record is idempotent.
 
 The acceptance record must use schema `kepler.runtime-acceptance/v1` and include
 plugin/version, candidate root, `control_project_path`, clean profile path,
 selected logical keys, runtime project IDs, exact paths, Plan
-revisions, task IDs, modes, requested/effective model and reasoning values,
-receipts, WorkerResult IDs, status transitions, commands and exit codes, and
-before/after Git status. Never record credentials or repository contents.
+revisions, control task ID, bootstrap and final task IDs, modes,
+requested/effective model and
+reasoning values, effective configuration attestations, receipts, WorkerResult
+IDs, status transitions, artifact token estimates, before/after live task
+project associations, Herdr session/workspace/tab/pane/agent identities,
+CleanupReceipt IDs and outcomes, commands and exit codes, and before/after Git status.
+Never record credentials or repository contents.
 
-Any missing exact identity, model evidence, confirmation, stale-revision
-rejection, direct-worker access, create/resume proof, WorkerResult progression,
-or no-monitoring proof blocks release.
+Any intermediary dispatcher task, collaboration-agent worker routing, changed
+worker project association, missing exact identity, model evidence,
+confirmation, stale-revision
+rejection, permission-preserving bootstrap, final pre-prompt configuration
+verification, direct-worker access, create/resume proof, WorkerResult
+progression, same-task Herdr attachment, cleanup refusal/success evidence, or
+no-monitoring proof blocks release.
 
 ## Plugin upgrade acceptance
 
@@ -64,7 +113,7 @@ control project plus selected synthetic project state.
    does not use this refresh command.
 3. Run `codex plugin add kepler@kepler-team --json` without removing the prior
    plugin and without running setup or bootstrap.
-4. Verify installed version `1.1.0`, start a fresh task, and prove the target
+4. Verify installed version `1.1.1`, start a fresh task, and prove the target
    Kepler skills load.
 5. Re-run the preservation checks and require unchanged control-project Git
    status, selected-project Git status, and ignored state plus a passing Doctor.

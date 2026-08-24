@@ -7,13 +7,22 @@ other codebases as independent saved Codex projects.
 exact paths. It proposes ArchitectureMap workspaces and non-exclusive domains;
 the user confirms them before planning or dispatch.
 
-Sol may inspect selected projects read-only during `/kepler plan`. Terra uses
-the exact verified target during `/kepler dispatch`, creates or resumes an
-ordinary Local or Worktree task, returns its receipt, and stops. Workers remain
-directly accessible and may follow project evidence outside the initial
-ContextPack paths.
+Sol may inspect selected projects read-only during `/kepler plan`; the same
+control task performs `/kepler dispatch` without creating an intermediary
+control-project task. Every new Terra worker starts as an empty
+permission-preserving Local task bound to its owning opaque project ID, is
+handed off when Worktree mode is required, and is verified again before its
+prompt and after delivery. Existing workers are continued only
+through the project-preserving task-message surface. Direct prompted creation
+and collaboration-agent worker routing are invalid. The control task verifies
+the app-server and live owning project ID plus task path before and after
+delivery, returns the attested receipt, and ends the dispatch turn without monitoring.
+Workers remain directly accessible and may follow project evidence outside the
+initial ContextPack paths.
 
-Use `/kepler status` to read Plan, receipt, and WorkerResult state. Kepler does
-not poll workers or synchronize their transcripts. Commits, remote writes,
+Use `/kepler status` to read Plan, receipt, and WorkerResult state. For a task
+with a final response, status reads only that response and idempotently ingests
+its exact structured WorkerResult. Kepler does not poll progress, synchronize
+transcripts, or create a planner while collecting results. Commits, remote writes,
 deployments, publication, and shared-environment mutation remain explicit
 approval boundaries.

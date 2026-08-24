@@ -25,6 +25,10 @@ is allowed.
 5. State assumptions only when they affect scope, ownership, risk, or
    validation. Ask one focused question only when a missing decision would
    materially change the plan.
+6. Before revision or synthesis planning, ingest available completed
+   WorkerResults and use their artifact paths plus unresolved decisions. Do not
+   reconstruct worker work from transcripts or paste full findings into a new
+   planning prompt.
 
 ## Keep planning separate from execution
 

@@ -14,8 +14,8 @@ operational change. Start coordinated work with `/kepler plan`.
    and RTO.
 3. Resolve the selected owning project and ArchitectureMap domain. Sol may
    inspect relevant project evidence read-only while planning.
-4. Terra dispatches an approved unit and returns the receipt without
-   monitoring.
+4. The same Sol control task dispatches an approved Terra worker directly into
+   its owning project and returns the receipt without monitoring.
 5. Keep source intent, generated plans, applied migrations, primary and replica
    state, backups, and observed runtime evidence distinct.
 6. Require separate authorization for each live data or environment action.

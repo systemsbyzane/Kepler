@@ -28,8 +28,9 @@ failovers, production diagnostics, maintenance, or any live database action.
 
 In a Kepler control project, resolve the owning project and ArchitectureMap
 domain. Sol may inspect its code, schema, or declared configuration read-only
-while planning. Terra dispatches approved worker units; live data and runtime
-actions require their own authorization. Combine this database method with `$kepler-development` for
+while planning. The same Sol control task dispatches approved Terra worker
+units directly into their owning projects; live data and runtime actions
+require their own authorization. Combine this database method with `$kepler-development` for
 application persistence, `$kepler-charts` for manifests,
 `$kepler-platform` for managed services and environments, `$kepler-ci`
 for migration delivery, and `$kepler-compliance` for program evidence or

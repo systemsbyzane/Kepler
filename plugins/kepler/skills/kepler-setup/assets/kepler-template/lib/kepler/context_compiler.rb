@@ -7,6 +7,7 @@ require_relative "memory_store"
 module Kepler
   class ContextCompiler
     DEFAULT_BUDGET = 2_000
+    DEFAULT_RESULT_BUDGET = 2_000
 
     def initialize(config)
       @config = config
@@ -23,7 +24,7 @@ module Kepler
         raise ValidationError, "Plan unit #{unit['id']} references unknown domain #{workspace}.#{domain}"
       end
       objective = plan["objective"].is_a?(Hash) ? plan["objective"]["summary"] : plan["objective"]
-      memory_budget = [budget.to_i / 3, 600].min
+      memory_budget = [budget.to_i / 4, 400].min
       memory = MemoryStore.new(@config).query(
         text: objective,
         workspace: workspace,
@@ -32,6 +33,7 @@ module Kepler
         token_budget: memory_budget
       )
       handoffs = upstream_handoffs(plan, unit)
+      related = related_work(plan, unit)
       revision = plan.dig("metadata", "revision")
       plan_id = plan.dig("metadata", "id")
       id = "ctx-#{plan_id}-#{unit['id']}-r#{revision}"
@@ -55,17 +57,24 @@ module Kepler
         "prior_attempts" => memory["items"].select { |item| item["type"] == "ATTEMPT" }.map { |item| item["statement"] },
         "dependencies" => deduplicate(Array(unit["dependencies"])),
         "upstream_handoffs" => handoffs,
-        "related_work" => plan["units"].reject { |candidate| candidate["id"] == unit["id"] }.map { |candidate| { "unit" => candidate["id"], "status" => state(candidate) } },
+        "related_work" => related,
         "references" => deduplicate(Array(unit["references"])),
         "constraints" => deduplicate(Array(plan["constraints"]) + Array(unit["constraints"])),
         "success_criteria" => deduplicate(Array(unit["success_criteria"])),
         "telemetry" => {
           "memory" => memory["telemetry"],
-          "upstream_handoff_count" => handoffs.length
+          "upstream_handoff_count" => handoffs.length,
+          "related_unit_count" => related.length,
+          "omitted_unrelated_unit_count" => [plan["units"].length - related.length - 1, 0].max
         },
         "worker_policy" => {
           "initial_context_not_boundary" => true,
           "return_worker_result" => true,
+          "result_token_budget" => DEFAULT_RESULT_BUDGET,
+          "structured_result_only" => true,
+          "avoid_context_repetition" => true,
+          "evidence_reuse" => "Reuse already observed file and command evidence unless state may have changed or a new question requires another read.",
+          "result_instruction" => "Return only the structured WorkerResult. Reference paths and commands instead of repeating ContextPack text, repository contents, or long tool output.",
           "instruction" => "These references and paths are initial relevant context, not an exclusive boundary. Follow repository evidence wherever necessary to complete the task correctly."
         }
       }
@@ -110,6 +119,18 @@ module Kepler
         next if seen[key]
         seen[key] = true
         output << value
+      end
+    end
+
+    def related_work(plan, unit)
+      unit_id = unit.fetch("id")
+      dependency_ids = Array(unit["dependencies"])
+      dependent_ids = plan["units"].select do |candidate|
+        Array(candidate["dependencies"]).include?(unit_id)
+      end.map { |candidate| candidate["id"] }
+      relevant_ids = (dependency_ids + dependent_ids).uniq
+      plan["units"].select { |candidate| relevant_ids.include?(candidate["id"]) }.map do |candidate|
+        { "unit" => candidate["id"], "status" => state(candidate) }
       end
     end
 

@@ -11,6 +11,16 @@
     "parent_plan": {"type": "object", "required": ["id", "revision"]},
     "objective": {"type": "string", "minLength": 1},
     "scope": {"type": "object", "required": ["workspace", "codex_project", "runtime_project_id", "project_path", "domain", "paths"]},
-    "worker_policy": {"type": "object", "required": ["initial_context_not_boundary", "return_worker_result"], "properties": {"initial_context_not_boundary": {"const": true}, "return_worker_result": {"const": true}}}
+    "worker_policy": {
+      "type": "object",
+      "required": ["initial_context_not_boundary", "return_worker_result", "result_token_budget", "structured_result_only", "avoid_context_repetition"],
+      "properties": {
+        "initial_context_not_boundary": {"const": true},
+        "return_worker_result": {"const": true},
+        "result_token_budget": {"type": "integer", "minimum": 1},
+        "structured_result_only": {"const": true},
+        "avoid_context_repetition": {"const": true}
+      }
+    }
   }
 }

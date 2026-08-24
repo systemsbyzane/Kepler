@@ -16,8 +16,9 @@ deployment as distinct actions.
    current checkout.
 2. In a Kepler control project, read `AGENTS.md` and
    `docs/workflows/ci-cd.md`. Sol may inspect selected-project pipeline source
-   and provider evidence read-only while preparing the Plan; Terra dispatches
-   approved diagnosis or implementation units.
+   and provider evidence read-only while preparing the Plan; the same Sol
+   control task dispatches approved Terra diagnosis or implementation workers
+   directly into their owning projects.
 3. In the owning project, read applicable repository instructions before
    inspecting workflow definitions, scripts, logs, checks, or artifacts.
 4. Use a connected source-control or CI capability for current run evidence

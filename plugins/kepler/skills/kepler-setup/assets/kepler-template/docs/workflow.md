@@ -1,6 +1,6 @@
 # Kepler workflow
 
-Use `/kepler plan` to create or revise the current durable Plan without implementation mutation. Use `/kepler dispatch` to compile ContextPacks and dispatch only ready units from the exact displayed revision. Terra returns task receipts and stops.
+Use `/kepler plan` to create or revise the current durable Plan without implementation mutation. Use `/kepler dispatch` in that same control task to compile ContextPacks and directly dispatch only ready Terra workers from the exact displayed revision into their owning projects. The control task returns receipts and ends the dispatch turn without monitoring.
 
 Workers are ordinary Codex tasks. The supplied paths are initial relevant context, never an exclusive boundary. Workers return compact WorkerResults rather than transcripts. `/kepler status` derives dependencies, validation, blockers, and newly ready units from structured state. `/kepler doctor` remains read-only.
 

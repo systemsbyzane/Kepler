@@ -35,6 +35,7 @@ module Kepler
       when "architecture" then architecture(config, arguments)
       when "plan" then plan(config, arguments)
       when "dispatch" then dispatch(config, arguments)
+      when "cleanup" then cleanup(config, arguments)
       when "review" then review(config, arguments)
       when "result" then result(config, arguments)
       when "memory" then memory(config, arguments)
@@ -77,6 +78,11 @@ module Kepler
       end.parse!(argv)
       empty!(argv)
       result = Doctor.new(config).run
+      current_plan_path = File.join(config.plan_dir, "current")
+      result["current_plan"] = if File.file?(current_plan_path)
+                                 store = PlanStore.new(config)
+                                 store.summary(store.load)
+                               end
       if options[:write]
         path = File.join(config.report_dir, "STATUS.md")
         Support.atomic_write(path, status_markdown(result))
@@ -347,6 +353,34 @@ module Kepler
       0
     end
 
+    def cleanup(config, argv)
+      subcommand = argv.shift
+      id = argv.shift
+      raise UsageError, "cleanup #{subcommand || 'command'} requires PLAN_ID" unless id
+      options = { preserve_worktrees: false }
+      OptionParser.new do |parser|
+        parser.on("--revision N", Integer) { |value| options[:revision] = value }
+        parser.on("--unit ID") { |value| options[:unit_id] = value }
+        parser.on("--receipt FILE") { |value| options[:receipt_path] = value }
+        parser.on("--preserve-worktrees") { options[:preserve_worktrees] = true }
+      end.parse!(argv)
+      empty!(argv)
+      raise UsageError, "--revision is required" unless options[:revision]
+      store = PlanStore.new(config)
+      value = case subcommand
+              when "prepare"
+                options.delete(:receipt_path)
+                store.prepare_cleanup(id: id, **options)
+              when "record"
+                raise UsageError, "cleanup record requires --unit and --receipt" unless options[:unit_id] && options[:receipt_path]
+                options.delete(:preserve_worktrees)
+                store.record_cleanup(id: id, **options)
+              else raise UsageError, "cleanup requires prepare or record"
+              end
+      json(value)
+      0
+    end
+
     def review(config, argv)
       id = argv.shift
       empty!(argv)
@@ -412,14 +446,17 @@ module Kepler
           bin/kepler plan status [PLAN_ID]
           bin/kepler dispatch prepare PLAN_ID --revision N [--unit ID] [--budget N]
           bin/kepler dispatch record PLAN_ID --revision N --unit ID --receipt FILE
+          bin/kepler cleanup prepare PLAN_ID --revision N [--unit ID] [--preserve-worktrees]
+          bin/kepler cleanup record PLAN_ID --revision N --unit ID --receipt FILE
           bin/kepler result ingest FILE
           bin/kepler review [PLAN_ID]
           bin/kepler memory ingest FILE
           bin/kepler memory query --text TEXT [--workspace ID] [--domain ID] [--limit N]
 
-        doctor, status, setup plan, route plan, repo plan, bridge plan, and review are read-only.
+        doctor, status, setup plan, route plan, repo plan, bridge plan, cleanup prepare,
+        and review are read-only.
         status --write, setup apply, repo onboard, bridge install, architecture
-        confirm, plan apply, dispatch record, result ingest, and memory ingest
+        confirm, plan apply, dispatch record, cleanup record, result ingest, and memory ingest
         have explicit state-changing names and write only their documented scope.
       HELP
       0
@@ -448,12 +485,34 @@ module Kepler
         "- Selected projects: #{summary['selected_projects']}",
         "- Plans: #{summary['plans']}",
         "- Bridges: #{summary['bridges']}",
-        "",
-        "Ahead and behind values use local tracking refs; no fetch was performed.",
-        "",
-        "## Findings",
         ""
       ]
+      if result["current_plan"]
+        plan = result.fetch("current_plan")
+        tokens = plan.fetch("token_efficiency")
+        lines.concat(
+          [
+            "## Current Plan",
+            "",
+            "- ID: #{plan['plan_id']}",
+            "- Revision: #{plan['revision']}",
+            "- State: #{plan['state']}",
+            "- Ready units: #{plan['ready_units'].empty? ? 'none' : plan['ready_units'].join(', ')}",
+            "- ContextPack estimated tokens: #{tokens['context_pack_estimated_tokens']}",
+            "- WorkerResult estimated tokens: #{tokens['worker_result_estimated_tokens']}",
+            "- Runtime token usage: #{tokens['runtime_token_usage']}",
+            ""
+          ]
+        )
+      end
+      lines.concat(
+        [
+          "Ahead and behind values use local tracking refs; no fetch was performed.",
+          "",
+          "## Findings",
+          ""
+        ]
+      )
       lines.concat(result["issues"].empty? ? ["None."] : result["issues"].map do |item|
         "- **#{item['severity'].upcase}** `#{item['code']}` #{item['scope']}: #{item['message']}"
       end)

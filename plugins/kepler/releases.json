@@ -232,6 +232,30 @@
         "Create a new control project, select existing saved Codex projects by opaque runtime ID and exact path, confirm the ArchitectureMap, and run Doctor.",
         "Do not copy workload lifecycle state, Missions, Operations, transcripts, or Kepler-legacy content into the new control project."
       ]
+    },
+    {
+      "version": "1.1.1",
+      "date": "2026-08-24",
+      "summary": "Single-task Sol control loop, exact worker routing, and optional Herdr execution visibility.",
+      "changes": [
+        {"category": "fixed", "text": "Kept review-only Plans and Plan revisions in the current task when it already runs Sol with high reasoning, instead of creating a redundant control-project task."},
+        {"category": "fixed", "text": "Required every new implementation, review, research, and synthesis worker to use the permission-preserving bootstrap and final-task verification before receiving its prompt."},
+        {"category": "fixed", "text": "Rejected direct-created, mismatched, or unattested DispatchReceipts so a managed workspace sandbox cannot be recorded as inherited global configuration."},
+        {"category": "fixed", "text": "Required completed WorkerResults to be ingested before synthesis or replanning instead of copying findings into redundant planner prompts."},
+        {"category": "fixed", "text": "Kept dispatch in the current Sol control task instead of creating a redundant control-project Terra dispatcher task."},
+        {"category": "fixed", "text": "Prohibited collaboration-agent routing for repository workers, bound app-server task creation to the owning opaque project ID, and required the returned project ID and task path to remain stable after creation, handoff, prompt delivery, and continuation."},
+        {"category": "changed", "text": "Made planner bootstrap return a no-op reuse receipt for an existing Sol High task unless the user explicitly requests a separate planner."},
+        {"category": "changed", "text": "Reduced ContextPack memory and related-work expansion, required one-copy dispatch prompts and compact structured results, and exposed artifact-only token estimates in Plan status."},
+        {"category": "added", "text": "Added an optional Herdr attachment that resumes the same exact verified Codex worker in a receipt-owned terminal workspace without replacing app-server project identity or WorkerResults."},
+        {"category": "added", "text": "Added explicit receipt-driven cleanup that closes owned Herdr workspaces, archives completed Codex workers, and removes only clean inactive Worktrees already merged into the owning checkout while preserving branches."}
+      ],
+      "breaking_changes": [],
+      "migration": [
+        "Start a fresh Codex task after upgrading so the updated single-control-task routing instructions and MCP tool schema load.",
+        "New generated control projects require permission-attested DispatchReceipts; existing generated control projects remain preserved.",
+        "Existing generated control projects remain valid and are not regenerated automatically.",
+        "Herdr attachment and cleanup require a newly generated or explicitly migrated control project plus a fresh Codex task started inside Herdr."
+      ]
     }
   ]
 }

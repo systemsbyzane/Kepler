@@ -14,8 +14,9 @@ The hub thread owns:
 - ContextPacks, worker task IDs, and DispatchReceipts
 - cross-project sequencing, approvals, and validated WorkerResult ingestion
 
-Sol does not edit selected projects. Terra starts or resumes the exact workers,
-records receipts, and stops. `/kepler status` ingests validated WorkerResults;
+Sol does not edit selected projects. The same Sol control task starts or
+resumes the exact Terra workers directly in their owning projects, records
+receipts, and ends the dispatch turn. `/kepler status` ingests validated WorkerResults;
 worker transcripts are not synchronized.
 
 ## Thread Tool Flow
@@ -30,12 +31,14 @@ worker transcripts are not synchronized.
    - Use **Worktree** mode when the user wants isolation, parallel experiments,
      or a branch that should not touch the current checkout.
 3. Search recent tasks in each exact selected project and resume only an
-   objective match; otherwise create a normal worker task.
+   objective match; otherwise bootstrap an empty permission-preserving task,
+   hand it off for Worktree mode, and verify the final task before its prompt.
+   Never directly create a prompted worker.
 4. Dispatch only identified ready units from the persisted Plan revision.
 5. Record logical project keys, runtime project IDs, child thread IDs, repo
-   paths, branch expectations, and check status in a handoff packet or in the
-   DispatchReceipts, then return immediately. Do not poll, wait, or read child
-   progress after dispatch.
+   paths, branch expectations, bootstrap evidence, final configuration
+   verification, and check status in the DispatchReceipts, then return
+   immediately. Do not poll, wait, or read child progress after dispatch.
 
 ## Repo Split
 

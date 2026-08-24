@@ -30,6 +30,7 @@ endif
 	test validate
 
 test: ruby-tests
+	$(PYTHON) -m unittest discover -s $(PLUGIN)/scripts/tests -p 'test_*.py' -v
 	$(PYTHON) -m unittest discover -s $(SETUP)/tests -p 'test_*.py' -v
 	$(PYTHON) -m unittest discover -s $(PLUGIN)/skills/kepler-artifacts/tests -p 'test_*.py' -v
 	$(PYTHON) -m unittest discover -s $(PLUGIN)/skills/kepler-stig/tests -p 'test_*.py' -v

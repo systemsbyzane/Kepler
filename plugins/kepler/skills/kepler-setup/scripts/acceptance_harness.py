@@ -128,7 +128,10 @@ def run_harness() -> dict[str, Any]:
         route_ok = (
             route.get("runtime_project_id") == "runtime-alpha-001"
             and route.get("planner_runtime", {}).get("requested_model") == "gpt-5.6-sol"
-            and route.get("dispatcher_runtime", {}).get("requested_model") == "gpt-5.6-terra"
+            and route.get("dispatch_execution", {}).get("owner") == "current_control_task"
+            and route.get("dispatch_execution", {}).get("intermediary_dispatch_task_permitted") is False
+            and route.get("dispatch_execution", {}).get("prompt_delivery_method") == "codex-thread-message"
+            and route.get("worker_runtime", {}).get("requested_model") == "gpt-5.6-terra"
             and route.get("bridge_handoff", {}).get("status") == "not_configured"
             and route.get("context_policy", {}).get("context_pack_is_exclusive_boundary") is False
             and route.get("context_policy", {}).get("transcript_sync") is False

@@ -22,9 +22,13 @@ repo-local marketplace entry under `.agents/plugins/`.
 - Keep skill bodies concise; put detailed reusable method in one-level
   `references/`, deterministic logic in `scripts/`, and the generated Hub under
   the setup skill's `assets/`.
-- Preserve the coordinator boundary: Sol may inspect selected projects
-  read-only while planning; Terra performs exact dispatch and returns the
-  project/task receipt without monitoring.
+- Preserve the coordinator boundary: one Sol control task may inspect selected
+  projects read-only while planning, directly dispatches exact Terra workers
+  into their owning saved projects, collects structured status, and returns
+  project/task receipts without monitoring or implementing owner work.
+- Keep Herdr optional and identity-preserving: it may resume the same verified
+  Codex worker for visibility, but never replace app-server project binding or
+  WorkerResult-driven readiness. Cleanup must be receipt-owned and fail closed.
 - Preserve explicit approval gates for commits, remote writes, publication,
   deployment, shared-environment mutation, external communication, compliance
   submission, risk acceptance, and closure.

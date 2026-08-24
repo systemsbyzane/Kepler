@@ -4,12 +4,26 @@ Kepler runs inside Codex and coordinates normal Codex projects. A `Kepler-<compa
 
 The routing model is `workspace → saved Codex project → domain → path → dependency`. Live saved-project selection proposes an ArchitectureMap; the user confirms it before dispatch.
 
-Sol runs on `gpt-5.6-sol`, owns system reasoning and Plan revisions, and may
-inspect selected projects read-only. Terra runs on `gpt-5.6-terra`, owns
-exact-target verification and one-shot dispatch, records requested/effective
-runtime evidence, and stops at the receipt. Workers use their normal project
-runtime, own implementation, and may inspect any project evidence necessary.
+Sol runs on `gpt-5.6-sol`, owns system reasoning, Plan revisions, exact-target
+dispatch, status ingestion, and next-wave coordination in one control task,
+and may inspect selected projects read-only. Terra workers run on
+`gpt-5.6-terra` in their exact owning projects, own implementation, and may
+inspect any project evidence necessary. The control task records
+requested/effective runtime and live project-association evidence, returns the
+receipts, and ends the dispatch turn without monitoring.
 Kepler owns the ArchitectureMap, Plans, ContextPacks, WorkerResults, receipts,
 memory, and system status.
 
-Release invariants: planning does not mutate connected repositories; dispatch is explicit and revision-pinned; unresolved identities fail closed; workers remain fully capable; transcripts are not synchronized; memory stores sourced knowledge rather than chat; no hidden runtime or Mission/Operation lifecycle exists.
+Herdr is an optional execution-view adapter. Kepler first creates and verifies
+the exact app-server task and opaque project association, then Herdr resumes
+that same task in a receipt-owned workspace. Herdr never becomes a second
+worker identity or a source of unit completion. Explicit cleanup closes the
+owned view, archives the same Codex task, and removes only provably safe merged
+Worktrees while retaining branches and structured evidence.
+
+Release invariants: planning does not mutate connected repositories; dispatch
+is explicit, revision-pinned, and performed by the current control task without
+an intermediary dispatcher; worker project association is verified before and
+after prompt delivery; unresolved identities fail closed; workers remain fully
+capable; transcripts are not synchronized; memory stores sourced knowledge
+rather than chat; no hidden runtime or Mission/Operation lifecycle exists.

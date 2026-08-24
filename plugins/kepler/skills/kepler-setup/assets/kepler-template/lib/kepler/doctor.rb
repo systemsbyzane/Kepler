@@ -78,12 +78,15 @@ module Kepler
         end
       end
       planner = @config.routing.fetch("planner_runtime", {})
-      dispatcher = @config.routing.fetch("dispatcher_runtime", {})
+      worker = @config.routing.fetch("worker_runtime", {})
       unless planner["model"] == "gpt-5.6-sol"
         issues << issue("error", "runtime.sol_model", "routing.planner_runtime", "Sol must request gpt-5.6-sol")
       end
-      unless dispatcher["model"] == "gpt-5.6-terra"
-        issues << issue("error", "runtime.terra_model", "routing.dispatcher_runtime", "Terra must request gpt-5.6-terra")
+      unless worker["model"] == "gpt-5.6-terra"
+        issues << issue("error", "runtime.terra_model", "routing.worker_runtime", "Terra workers must request gpt-5.6-terra")
+      end
+      unless @config.routing["dispatch_execution_policy"] == "current_control_task_only"
+        issues << issue("error", "runtime.dispatch_owner", "routing.dispatch_execution_policy", "the current Sol control task must own dispatch")
       end
       issues
     rescue ValidationError => e

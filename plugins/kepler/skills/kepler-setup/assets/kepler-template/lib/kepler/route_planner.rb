@@ -3,6 +3,7 @@
 require_relative "config"
 require_relative "bridge_store"
 require_relative "architecture_map_store"
+require_relative "context_compiler"
 
 module Kepler
   class RoutePlanner
@@ -31,7 +32,7 @@ module Kepler
       project_record = @config.project_verifications.fetch(logical_key)
       mode = mode_for(normalized_type, project_record)
       bridge_handoff = optional_bridge_handoff(workspace_entry)
-      dispatcher = @config.routing.fetch("dispatcher_runtime")
+      worker = @config.routing.fetch("worker_runtime")
       planner = @config.routing.fetch("planner_runtime")
       {
         "schema_version" => "kepler.route-plan/v2",
@@ -47,16 +48,20 @@ module Kepler
         "dispatch_ready" => true,
         "stop_after_dispatch" => true,
         "planner_runtime" => runtime_contract(planner),
-        "dispatcher_runtime" => runtime_contract(dispatcher),
-        "worker_runtime" => {
-          "role" => "ordinary_codex_worker",
-          "model" => "user_or_project_configured",
-          "directly_accessible" => true
+        "dispatch_execution" => {
+          "owner" => "current_control_task",
+          "intermediary_dispatch_task_permitted" => false,
+          "prompt_delivery_method" => "codex-thread-message",
+          "project_association_verification" => "app-server-and-live-project-task-list-before-and-after"
         },
+        "worker_runtime" => runtime_contract(worker).merge("directly_accessible" => true),
         "bridge_handoff" => bridge_handoff,
         "context_policy" => {
           "context_pack_is_initial_context" => true,
           "context_pack_is_exclusive_boundary" => false,
+          "context_pack_serialized_once" => true,
+          "worker_result_token_budget" => ContextCompiler::DEFAULT_RESULT_BUDGET,
+          "runtime_token_usage" => "unavailable",
           "transcript_sync" => false,
           "completion_source" => "validated_worker_result"
         },
@@ -71,17 +76,36 @@ module Kepler
           "fields" => %w[
             logical_project_key runtime_project_id project_path task_id mode
             requested_model effective_model requested_thinking effective_thinking
-            authorization_boundary
+            authorization_boundary creation_method bootstrap_schema_version
+            bootstrap_task_id bootstrap_expected_runtime_project_id
+            bootstrap_actual_runtime_project_id
+            configuration_verification_schema_version
+            configuration_verified configuration_verified_task_id
+            configuration_verified_before_prompt
+            configuration_verified_runtime_project_id
+            post_delivery_project_verification_schema_version
+            post_delivery_project_verified post_delivery_project_verified_task_id
+            post_delivery_verified_runtime_project_id post_delivery_verified_empty
+            configuration_mode
+            permission_profile sandbox_mode approval_policy context_pack_id
+            context_pack_estimated_tokens context_pack_token_budget
+            dispatch_execution intermediary_dispatch_task_created
+            dispatch_owner_task_id dispatch_owner_project_path
+            prompt_delivery_method project_association_verification_source
+            project_association_before project_association_after
           ],
           "monitoring_permitted" => false
         },
         "authorization_boundary" => "Explicit approval is required for commit, push, pull requests or comments, publication, deployment, shared environment mutation, external communication, compliance submission, risk acceptance, and closure claims.",
         "steps" => [
           "Verify the selected saved project by opaque runtime ID and exact normalized path.",
+          "Keep dispatch in the current Sol control task; do not create or resume an intermediary control-project task.",
           "Search recent tasks in that exact project and resume only an objective match.",
-          "Otherwise create a #{mode} task with model #{dispatcher.fetch('model')} and thinking #{dispatcher.fetch('thinking')}.",
-          "Send the ContextPack as non-exclusive initial context and request a structured WorkerResult.",
-          "Record requested and effective runtime fields in the DispatchReceipt.",
+          "Otherwise bootstrap an empty permission-preserving Local task with the owning opaque runtime project ID, model #{worker.fetch('model')}, and thinking #{worker.fetch('thinking')}; never directly create a prompted worker.",
+          "For Worktree mode, hand off the empty task, then verify the exact final task, owning project ID, and effective configuration before its prompt.",
+          "Verify the worker's live project ID and exact path, deliver through the project-preserving Codex task-message surface, and reject collaboration-agent delegation or resume.",
+          "Send the serialized ContextPack exactly once as non-exclusive initial context and request a compact structured WorkerResult.",
+          "Recheck the task through app-server and the live project list after delivery; record the actual project ID from bootstrap, pre-prompt verification, and post-delivery verification plus exact ContextPack token accounting in the DispatchReceipt.",
           "Return the receipt immediately; do not inspect artifacts, poll, wait, or monitor."
         ]
       }

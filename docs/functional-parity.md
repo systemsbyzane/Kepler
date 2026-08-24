@@ -34,7 +34,7 @@ Every mandatory surface needs:
 Mandatory local surfaces are:
 
 - Kepler registry, ArchitectureMap, Plan, ContextPack, DispatchReceipt,
-  WorkerResult, and memory schema semantics;
+  WorkerResult, CleanupReceipt, and memory schema semantics;
 - exact Plan revisioning, topology validation, dependency readiness, compact
   status, receipt/result progression, and stale-revision rejection;
 - `/kepler` command behavior and read-only/state-changing boundaries;
@@ -45,6 +45,8 @@ Mandatory local surfaces are:
   automation safety;
 - live saved-project selection, no repository-root scan, no selected-project
   mutation, no default workload topology, worker receipts, and no monitoring;
+- optional identity-preserving Herdr attachment plus receipt-owned cleanup that
+  refuses active, dirty, unmerged, or mismatched resources and preserves branches;
 - dispatch without a bridge plus fail-closed reference, materialized, and
   repo-native behavior when a bridge is explicitly configured;
 - exact project verification states, including a stable logical key distinct
@@ -72,7 +74,9 @@ tasks, evidence, generated findings, and controlled artifacts are mandatory
 exclusions, not parity gaps. Runtime project listing, model binding, and
 dispatch remain unresolved until installed fresh-task acceptance is executed
 and its evidence proves at least two exact-path/opaque-ID matches, requested
-and effective Sol/Terra identities, create-versus-resume, WorkerResult
-ingestion, and the no-monitoring boundary. A locally tested upgrade planner
+and effective Sol control-task/Terra worker identities, no intermediary
+dispatcher, stable owning-project association, create-versus-resume, WorkerResult
+ingestion, same-task Herdr attachment, safe cleanup, and the no-monitoring
+boundary. A locally tested upgrade planner
 cannot prove that an installed upgrade succeeded or that refreshed skills
 loaded in a new task.
