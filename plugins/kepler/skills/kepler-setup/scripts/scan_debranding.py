@@ -12,7 +12,11 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from validate_structured import generated_boundaries, is_generated_control_plane_file
+from validate_structured import (
+    generated_boundaries,
+    is_generated_control_plane_file,
+    yaml_value,
+)
 
 
 TEXT_SUFFIXES = {
@@ -152,6 +156,45 @@ def current_home_patterns() -> tuple[re.Pattern[str], ...]:
     )
 
 
+def declared_selected_project_paths(root: Path) -> tuple[str, ...]:
+    architecture_map_path = root / "hub" / "architecture-map.yaml"
+    if not architecture_map_path.is_file():
+        return ()
+    try:
+        architecture_map = yaml_value(architecture_map_path)
+    except (OSError, ValueError, json.JSONDecodeError):
+        return ()
+    if not isinstance(architecture_map, dict):
+        return ()
+    metadata = architecture_map.get("metadata")
+    if (
+        architecture_map.get("kind") != "ArchitectureMap"
+        or not isinstance(metadata, dict)
+        or metadata.get("confirmed") is not True
+    ):
+        return ()
+    workspaces = architecture_map.get("workspaces")
+    if not isinstance(workspaces, dict):
+        return ()
+    paths: dict[str, None] = {}
+    for workspace in workspaces.values():
+        if not isinstance(workspace, dict):
+            continue
+        project_path = workspace.get("project_path")
+        if isinstance(project_path, str) and Path(project_path).is_absolute():
+            paths[project_path] = None
+    return tuple(paths)
+
+
+def redact_allowed_path(line: str, allowed_path: str) -> str:
+    boundary = r"A-Za-z0-9._~/-"
+    return re.sub(
+        rf"(?<![{boundary}]){re.escape(allowed_path)}(?![{boundary}])",
+        "<allowed-runtime-path>",
+        line,
+    )
+
+
 def scan(
     root: Path,
     allow: set[str],
@@ -190,7 +233,7 @@ def scan(
         for number, line in enumerate(lines, 1):
             inspected = line
             for allowed_path in allowed_exact_paths:
-                inspected = inspected.replace(allowed_path, "<generated-root>")
+                inspected = redact_allowed_path(inspected, allowed_path)
             for pattern in home_patterns:
                 if pattern.search(inspected):
                     findings.append(
@@ -235,7 +278,11 @@ def main() -> int:
     )
     args = parser.parse_args()
     root = args.root.resolve()
-    allowed_exact_paths = (str(root),) if args.allow_generated_root else ()
+    allowed_exact_paths = (
+        (str(root), *declared_selected_project_paths(root))
+        if args.allow_generated_root
+        else ()
+    )
     try:
         private = load_private_neutralization(args.private_neutralization_map)
         findings = scan(
