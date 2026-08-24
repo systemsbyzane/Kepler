@@ -6,7 +6,8 @@ description: Coordinate safe, reliable database work through Kepler. Use wheneve
 # Kepler Database
 
 Apply database guidance at the depth the request needs. Keep conceptual answers
-lightweight; route repository-owned or live-state work before inspecting it.
+lightweight. In a Kepler control project, Sol may inspect selected-project
+evidence read-only while planning; live-state work remains separately gated.
 
 Classify the request as conceptual guidance, design, review, implementation,
 migration, performance diagnosis, incident analysis, or an operational action.
@@ -25,9 +26,10 @@ failovers, production diagnostics, maintenance, or any live database action.
 
 ## Ownership And Routing
 
-In a generated Hub, resolve and dispatch the owning repository, service,
-platform, environment, or program before inspecting its code, schema, data, or
-runtime. Combine this database method with `$kepler-development` for
+In a Kepler control project, resolve the owning project and ArchitectureMap
+domain. Sol may inspect its code, schema, or declared configuration read-only
+while planning. Terra dispatches approved worker units; live data and runtime
+actions require their own authorization. Combine this database method with `$kepler-development` for
 application persistence, `$kepler-charts` for manifests,
 `$kepler-platform` for managed services and environments, `$kepler-ci`
 for migration delivery, and `$kepler-compliance` for program evidence or

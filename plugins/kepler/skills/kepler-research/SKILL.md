@@ -6,7 +6,9 @@ description: Run durable, evidence-led technical research through a Kepler. Use 
 # Kepler Research
 
 Define the decision, audience, scope, freshness window, and evidence boundary.
-Dispatch project-owned research to the owning project before target analysis.
+In a Kepler control project, Sol may inspect selected-project evidence
+read-only while planning research. Dispatch project-owned execution only for
+an approved Plan unit.
 
 Maintain a source ledger with owner, location, publication or observation date,
 authority, scope, and access state. Separate observed fact, source
@@ -21,4 +23,3 @@ Read `references/source-ledger.md`. Return a concise decision brief, trace,
 confidence, contradictions, gaps, and refresh recommendation. External
 communication and authenticated or live-environment access require their
 applicable authorization.
-

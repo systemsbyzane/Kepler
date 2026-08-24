@@ -63,26 +63,22 @@ candidates and authorizes draft PR creation after validation. The Hub still
 reports exact repos, branches, checks, residual findings, and downstream impact
 before publication.
 
-The Hub automatically resolves each approved candidate to its owning repo,
-searches for a matching project task, and creates a Worktree task when none
-exists. If the repo is not cloned, the Hub verifies ownership, clones it under
-`patching/`, registers the repo and saved project, installs the bridge, and then
-launches the task. Saved-project verification requires an exact normalized
-real-path match in a refreshed live list. The Hub keeps its logical project key
-separate, captures the opaque runtime project ID from that match, and uses the
-runtime ID for task search and launch.
+Kepler resolves each approved candidate to an already-selected project and
+searches for a matching task, creating a Worktree task when none exists. It
+does not clone, register, or install a bridge. Saved-project verification
+requires an opaque runtime ID and exact normalized path from the refreshed live
+list; display names are not identity.
 
 After launching approved implementation tasks, return their IDs immediately.
 Do not poll, wait for builds, or read task progress from the approval thread.
-The user monitors the project tasks and can return to the Hub for later
-consolidation or follow-up.
+The user can open workers directly and return to `/kepler status` to ingest
+validated WorkerResults.
 
-Only after automatic project registration or cross-project task creation fails
-after a live-state refresh and one retry, use the fallback handoff:
+If cross-project task creation fails after a live-state refresh and one retry,
+use the fallback handoff:
 
 1. Generate one self-contained handoff per owning repo.
 2. Tell the user the exact saved project and Local/Worktree mode.
 3. After the user starts it, discover or read it only when the user explicitly
    asks the Hub to resume.
 4. Consolidate source, chart, and runtime evidence only on that later request.
-

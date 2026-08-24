@@ -1,143 +1,48 @@
-# Kepler
+# Kepler control project
 
-A local coordination layer for coordinating independent repositories, program
-workspaces, environments, research, and recurring operational checks.
-
-Start work here, resolve the owner, dispatch to the owning Codex project, return
-the logical project key, opaque runtime project ID, task ID, and mode, then stop
-without monitoring. Owning projects remain authoritative for code, tests,
-branches, artifacts, and live validation.
+This project coordinates existing saved Codex projects. It does not contain,
+clone, import, or manage their repositories.
 
 ## Start here
 
-To set up Kepler or connect repositories, use natural language; no skill
-name or YAML editing is required.
+1. Run `/kepler setup`.
+2. Select existing saved projects from the live Codex project list by exact
+   path and opaque project ID.
+3. Review and confirm the proposed ArchitectureMap domains and relationships.
+4. Run `/kepler doctor`.
+5. Use `/kepler plan`, refine the Plan in conversation, then explicitly run
+   `/kepler dispatch` for the displayed revision.
+6. Use `/kepler status` and structured WorkerResults for progression. Open
+   ordinary workers directly whenever useful.
 
-1. Read [the guide map](docs/README.md) and
-   [Codex project model](docs/codex-ui-workflow.md).
-2. Ask: `Connect the Git repositories under <absolute-folder>.`
-3. Kepler previews discovery, connects safe checkouts in place, adds local
-   reference bridges, and reports only conflicts that need attention.
-4. Run `bin/kepler doctor --json`.
-5. Ask Kepler to plan or review work in natural language; no skill name or
-   mode selection is required.
-6. Ask about CI/CD, infrastructure, platform services, or environments the same
-   way; Kepler separates source work from external and runtime actions.
-7. Ask about a STIG rule, CKL, evidence gap, applicability decision, or
-   remediation naturally; Kepler adapts the depth without a fixed form.
-8. Ask to upgrade Kepler or show patch notes naturally. The installed
-   plugin workflow protects this Hub and never regenerates it.
-9. Describe an implementation outcome naturally. Kepler routes it to the
-   owning project, returns the task receipt, and stops without monitoring.
+No repositories-root prompt or scan is part of setup. There are no generated
+workload folders or pseudo-projects. Bridges are optional advanced
+configuration and are not required for setup or dispatch.
 
-## Repository placement
+## Runtime roles
 
-Existing repositories attach in place by default. Kepler discovers only
-under the folder you authorize, preserves dirty and untracked work, and does
-not move, reset, clean, fetch, or edit tracked repository files.
+- Sol uses `gpt-5.6-sol` for read-only planning inspection and Plan revisions.
+- Terra uses `gpt-5.6-terra` for exact dispatch, returns a receipt, and stops.
+- Workers use normal Codex project behavior and receive non-exclusive
+  ContextPacks.
 
-Portable facts are written to `hub/repositories.yaml`. An attached
-repository's exact absolute path exists only in ignored
-`hub/state/repositories.yaml`, so the tracked declaration remains reusable on
-another machine:
+Dispatch receipts record requested and effective runtime evidence. Worker
+transcripts are never copied into this project.
 
-```yaml
-api_version: kepler.dev/v1alpha1
-kind: RepositoryDeclarations
-schema: hub/schemas/repository-declarations.schema.json
-repositories:
-  - id: example-service
-    placement: attached
-    workload: development
-    provider: github
-    locator: example-company/example-service
-    owner: example-company
-    default_branch: main
-    default_branch_verified: true
-    bridge:
-      profile: application
-      mode: reference
-    codex_project:
-      expectation: saved_exact_path
-      logical_key: example-service
-```
-
-Repositories intentionally managed under a Hub workload root use
-`placement: managed` plus a Hub-relative `local_path`. Manual declaration
-editing remains available for advanced or ambiguous cases, but is not required
-for ordinary first-time setup.
-
-See [thread routing](docs/workflows/thread-routing.md) for Local, Worktree, and
-remote mode rules, and
-[repository onboarding](docs/workflows/repo-onboarding.md) for the absent or
-unsaved checkout path. See [planning](docs/workflows/planning.md) for
-right-sized planning and [change review](docs/review/change-review.md) for the
-findings-first review contract. Use [CI/CD](docs/workflows/ci-cd.md) for
-delivery pipelines and [platform](docs/workflows/platform.md) for
-infrastructure and environment work. Use
-[STIG evaluation](docs/compliance/stig-evaluation.md) for adaptive evidence,
-applicability, CKL, and remediation workflows.
-Use [plugin lifecycle](docs/workflows/plugin-lifecycle.md) to understand why a
-plugin update does not rewrite this generated Hub.
-Use [generated-Hub compatibility](docs/workflows/hub-compatibility.md) to
-inspect the versioned command and document surface before newer skills use it.
-
-## Workload roots
-
-- `development/` - application and service repositories
-- `charts/` - Helm, YAML, manifest, and deployment repositories
-- `patching/` - image and dependency source repositories
-- `research/` - durable technical research workspaces
-- `environments/` - platform and remote validation checkouts
-- Use `/kepler status` for current coordination state
-- `compliance/` - isolated program workspaces and the reusable template
-
-## Commands
+## Deterministic helpers
 
 ```text
 bin/kepler doctor --json
 bin/kepler status
-bin/kepler setup plan --repositories-root /absolute/repositories --json
-bin/kepler setup connect --repositories-root /absolute/repositories --json
-bin/kepler route plan --workload development --work-type implementation --repo-id example-service
-bin/kepler repo plan --workload patching --provider github --repo example/image
-bin/kepler bridge plan --repo-id example-service --mode reference
-bin/kepler bridge plan --all --failure-policy stop --json
-bin/kepler bridge install --all --failure-policy stop --json
-bin/kepler task new development example-feature --title "Example feature" --outcome "Deliver the scoped behavior"
+bin/kepler setup plan --project-catalog FILE --project-id ID --json
+bin/kepler setup apply --project-catalog FILE --project-id ID --architecture-map FILE --confirm --json
+bin/kepler route plan --workspace NAME --domain NAME --work-type TYPE --json
+bin/kepler plan apply FILE [--expect-revision N]
+bin/kepler dispatch prepare PLAN_ID --revision N
+bin/kepler dispatch record PLAN_ID --revision N --unit ID --receipt FILE
+bin/kepler result ingest FILE
+bin/kepler review [PLAN_ID]
 ```
 
-Read-only commands do not fetch, clone, edit, register projects, or mutate
-environments. Generated state is ignored.
-
-Initial setup discovers repositories and creates declarations automatically.
-Advanced bridge mode changes, migrations, drift repair, or manually declared
-sets follow `docs/workflows/configure-bridge-repos.md`. Both paths verify
-checkouts, install non-destructive bridges, run Doctor, register exact Codex
-projects, and write an ignored per-repository receipt.
-Declarations use stable logical project keys and never require pre-known
-runtime IDs. Registration refreshes the live project list, rejects display-name
-matches, requires the exact normalized real path, and records the returned
-opaque runtime ID only in ignored state. It does not create implementation
-tasks.
-
-For later repository work, `route plan` refuses a missing or drifting bridge
-and emits a verified `bridge_handoff`. Dispatch includes it completely in the
-child prompt. A Worktree reads its applicable repository `AGENTS.md` first,
-then verifies and reads ignored reference or materialized bridge artifacts
-from the original registered checkout because those ignored files do not
-travel into a new Worktree. Repo-native policy is tracked and read in place.
-
-## Runtime prerequisites
-
-- Ruby with its standard JSON, YAML, Open3, and Minitest libraries
-- Git for repository inspection, cloning, and Git-local bridge exclusions
-- Codex project and task capabilities for registration, live-list verification,
-  dispatch, and persistent task resume/create behavior
-- Optional authenticated provider CLIs for ownership and default-branch
-  discovery; credentials remain in the user's configured credential stores
-- Python 3 only when using the plugin's setup, comparison, de-branding, or CKL
-  utilities
-
-Run `make validate` and `bin/kepler doctor --json` after generation and after
-coordination-layer changes.
+See [workflow](docs/workflow.md), [saved-project routing](docs/workflows/thread-routing.md),
+[planning](docs/workflows/planning.md), and [advanced bridge configuration](docs/workflows/configure-bridge-repos.md).

@@ -61,9 +61,9 @@ EXPECTED_SKILLS = {
 
 REQUIRED_RUNTIME_ACCEPTANCE_NAMES = frozenset(
     {
-        "installed_setup_and_exact_path_project_registration",
-        "installed_bulk_bridge_configuration",
-        "installed_worker_search_create_resume_and_no_monitoring",
+        "installed_project_first_setup_and_exact_identity",
+        "installed_sol_terra_model_binding",
+        "installed_worker_create_resume_result_and_no_monitoring",
     }
 )
 
@@ -781,17 +781,25 @@ def first_existing(*paths: Path) -> Path | None:
 
 
 def hub_executable(root: Path) -> Path | None:
-    return first_existing(
+    explicit = first_existing(
         root / "bin" / "kepler",
         root / "bin" / SOURCE_CONTROL_TOKEN,
     )
+    if explicit:
+        return explicit
+    candidates = sorted(path for path in (root / "bin").glob("*") if path.is_file())
+    return candidates[0] if len(candidates) == 1 else None
 
 
 def hub_library(root: Path) -> Path | None:
-    return first_existing(
+    explicit = first_existing(
         root / "lib" / "kepler",
         root / "lib" / SOURCE_CONTROL_TOKEN,
     )
+    if explicit:
+        return explicit
+    candidates = sorted(path for path in (root / "lib").iterdir() if path.is_dir()) if (root / "lib").is_dir() else []
+    return candidates[0] if len(candidates) == 1 else None
 
 
 def registry_schema(root: Path) -> Path:
@@ -799,6 +807,23 @@ def registry_schema(root: Path) -> Path:
         root / "hub" / "schemas" / "kepler.schema.json",
         root / "hub" / "schemas" / f"{SOURCE_CONTROL_TOKEN}.schema.json",
     )
+    if path is None:
+        excluded = {"task.schema.json", "thread-links.schema.json"}
+        candidates = sorted(
+            candidate
+            for candidate in (root / "hub" / "schemas").glob("*.schema.json")
+            if candidate.name not in excluded
+            and "compatibility" not in candidate.name
+            and candidate.name not in {
+                "bridges.schema.json",
+                "bridge-setup-receipt.schema.json",
+                "compliance-artifact.schema.json",
+                "local-repositories.schema.json",
+                "project-verifications.schema.json",
+                "repository-declarations.schema.json",
+            }
+        )
+        path = candidates[0] if len(candidates) == 1 else None
     if path is None:
         raise FileNotFoundError(f"registry schema not found under {root}")
     return path
@@ -809,6 +834,9 @@ def hub_test(root: Path) -> Path:
         root / "tests" / "kepler_test.rb",
         root / "tests" / f"{SOURCE_CONTROL_TOKEN}_test.rb",
     )
+    if path is None:
+        candidates = sorted((root / "tests").glob("*_test.rb"))
+        path = candidates[0] if len(candidates) == 1 else None
     if path is None:
         raise FileNotFoundError(f"Hub test suite not found under {root}")
     return path
@@ -1190,11 +1218,7 @@ def compare(args: argparse.Namespace) -> dict[str, Any]:
         for item in acceptance_data.get("probes", [])
         if item.get("status") == "passed"
     }
-    doctor_required = {
-        "fresh_doctor",
-        "post_onboarding_doctor_no_errors",
-        "doctor_no_fetch_caveat",
-    }
+    doctor_required = {"bootstrap_apply_validated", "configured_doctor"}
     source_doctor_codes = {
         code
         for code in doctor_finding_codes(source)
@@ -1208,8 +1232,8 @@ def compare(args: argparse.Namespace) -> dict[str, Any]:
             status="matched",
             mandatory=True,
             scope="local",
-            mapping="Repository, task, compliance, bridge, automation, stable-finding, and no-fetch diagnostics map to neutral scopes with additive bridge safety checks.",
-            probe_name="fresh and post-onboarding Doctor acceptance probes",
+            mapping="Doctor validates project-first configuration, exact selected-project identity, model configuration, and strict opted-in bridge state without requiring a bridge by default.",
+            probe_name="fresh generated and configured project-first Doctor probes",
             passed=(
                 acceptance_pass
                 and doctor_required.issubset(probe_names)
@@ -1225,39 +1249,34 @@ def compare(args: argparse.Namespace) -> dict[str, Any]:
         )
     )
 
-    bridge_required = {
-        "materialized_bridge_portable",
-        "repo_native_preserves_authority_without_absolute_paths",
-        "worktree_bridge_handoff_uses_verified_original_checkout",
-        "clone_origin_branch_sha_clean",
-        "bulk_bridge_plan_read_only",
-        "bulk_bridge_idempotent_per_repo_receipt",
-        "bulk_bridge_conflict_refusal_with_continue_policy",
-    }
+    bridge_required = {"model_bound_route_and_optional_bridge"}
+    bridge_regression_present = "test_opted_in_bridge_fails_closed_when_missing_or_drifting" in (
+        candidate / "tests" / "kepler_test.rb"
+    ).read_text(encoding="utf-8")
     records.append(
         surface(
             "bridge_modes_and_integrity",
             status="matched",
             mandatory=True,
             scope="local",
-            mapping="The source local reference bridge maps to reference mode; application, chart, patching, and environment profiles map neutrally, with materialized and portable repo-native modes added.",
-            probe_name="synthetic reference, materialized, and repo-native bridge installation",
-            passed=acceptance_pass and bridge_required.issubset(probe_names),
+            mapping="Bridges are optional advanced policy augmentation: ordinary routing succeeds without one, while an explicitly configured bridge fails closed when missing or drifting.",
+            probe_name="optional route plus configured bridge missing-and-drift regression",
+            passed=(
+                acceptance_pass
+                and bridge_required.issubset(probe_names)
+                and candidate_tests.returncode == 0
+                and bridge_regression_present
+            ),
             evidence={
                 "required_probes": sorted(bridge_required),
                 "passed_probes": sorted(probe_names & bridge_required),
+                "configured_bridge_regression": bridge_regression_present,
+                "candidate_test_exit": candidate_tests.returncode,
             },
         )
     )
 
-    bulk_required = {
-        "bulk_bridge_plan_read_only",
-        "bulk_bridge_idempotent_per_repo_receipt",
-        "bulk_bridge_conflict_refusal_with_continue_policy",
-        "bulk_project_registration_pending_and_verified",
-        "logical_project_key_differs_from_runtime_project_id",
-        "legacy_project_self_equality_rejected",
-    }
+    bulk_required = {"model_bound_route_and_optional_bridge"}
     bulk_static_pass, bulk_static = static_contains(
         [
             plugin / "skills" / "kepler" / "SKILL.md",
@@ -1280,7 +1299,7 @@ def compare(args: argparse.Namespace) -> dict[str, Any]:
             "project_identity": (
                 "logical project key",
                 "opaque runtime project id",
-                "display name",
+                "display-name",
             ),
             "setup_boundary": ("does not create implementation tasks",),
         },
@@ -1291,8 +1310,8 @@ def compare(args: argparse.Namespace) -> dict[str, Any]:
             status="added",
             mandatory=True,
             scope="local",
-            mapping="The declarative repository set adds one agent-executable bulk setup surface while retaining the source bridge authority, drift, onboarding, exact-project, and no-monitoring contracts.",
-            probe_name="bulk bridge harness plus trigger and runbook semantic anchors",
+            mapping="Advanced bridge configuration retains read-only planning, explicit mutation authorization, exact project identity, and fail-closed drift behavior outside default setup.",
+            probe_name="advanced bridge contract plus optional-route acceptance",
             passed=(
                 acceptance_pass
                 and bulk_required.issubset(probe_names)
@@ -1307,15 +1326,9 @@ def compare(args: argparse.Namespace) -> dict[str, Any]:
     )
 
     onboarding_required = {
-        "repository_plan_read_only",
-        "clone_origin_branch_sha_clean",
-        "registration_remains_unclaimed",
-        "owning_repository_dispatch_receipt",
-        "worktree_bridge_handoff_uses_verified_original_checkout",
-        "route_contract",
-        "bulk_project_registration_pending_and_verified",
-        "logical_project_key_differs_from_runtime_project_id",
-        "legacy_project_self_equality_rejected",
+        "project_first_setup_exact_identity",
+        "no_default_workload_topology",
+        "model_bound_route_and_optional_bridge",
     }
     records.append(
         surface(
@@ -1323,8 +1336,8 @@ def compare(args: argparse.Namespace) -> dict[str, Any]:
             status="matched",
             mandatory=True,
             scope="local",
-            mapping="Source routing maps to capability-detected exact-path registration, verified clone/onboarding, resume-or-create receipts, and mandatory return without monitoring.",
-            probe_name="fresh generation and synthetic owning-repository acceptance harness",
+            mapping="Default setup selects already-saved Codex projects by opaque ID and exact path, performs no repository scan or mutation, and routes with resume-or-create receipts without monitoring.",
+            probe_name="project-first setup, no-workload topology, and model-bound route harness",
             passed=acceptance_pass and onboarding_required.issubset(probe_names),
             evidence={
                 "required_probes": sorted(onboarding_required),
@@ -1344,7 +1357,7 @@ def compare(args: argparse.Namespace) -> dict[str, Any]:
             status="added",
             mandatory=True,
             scope="local",
-            mapping="The distributable setup flow is additive and fail-closed: empty-target generation, local prerequisites, artifact capability checks, validation, exact-path registration verification, one retry, and one manual action.",
+            mapping="The distributable setup flow is project-first and fail-closed: generate an empty control project, select live saved projects by opaque ID and exact path, confirm the ArchitectureMap, and validate without scanning or mutating repositories.",
             probe_name="setup link validator, local preflight, and fresh-generation acceptance",
             passed=setup_pass,
             evidence={
@@ -1437,16 +1450,16 @@ def compare(args: argparse.Namespace) -> dict[str, Any]:
                 "allow_implicit_invocation: true",
             ),
             "planning_boundary": (
-                "read-only by default",
-                "does not edit files, create or resume tasks",
+                "read-only with respect to selected projects",
+                "must not edit them or dispatch workers",
             ),
             "adaptive_depth": (
                 "infer depth",
                 "smallest useful executable plan",
             ),
             "coordinator_boundary": (
-                "registry and routing evidence",
-                "do not inspect owner code",
+                "confirmed architecturemap",
+                "inspect selected projects read-only",
             ),
             "execution_gate": ("user separately asks to proceed",),
         },
@@ -1482,8 +1495,8 @@ def compare(args: argparse.Namespace) -> dict[str, Any]:
                 "do not fix findings",
             ),
             "owner_dispatch": (
-                "before inspecting owner code",
-                "return the receipt without monitoring",
+                "inspect selected project evidence read-only",
+                "returns the receipt without monitoring",
             ),
             "findings_first": (
                 "lead with actionable findings",
@@ -1535,7 +1548,7 @@ def compare(args: argparse.Namespace) -> dict[str, Any]:
                 "build, publish, promote, deploy, and verify",
             ),
             "owner_and_authorization_boundary": (
-                "before inspecting pipeline source",
+                "inspect selected-project pipeline source",
                 "do not authorize rerunning or cancelling workflows",
                 "return the receipt without monitoring",
             ),
@@ -1570,7 +1583,7 @@ def compare(args: argparse.Namespace) -> dict[str, Any]:
             ),
             "source_runtime_split": (
                 "source, live state, and runtime validation without conflating them",
-                "source ownership and live environment ownership distinct",
+                "source owner and the live-state owner separately",
             ),
             "exact_context": (
                 "exact account, project, subscription, region, cluster, namespace, and revision",
@@ -1634,8 +1647,8 @@ def compare(args: argparse.Namespace) -> dict[str, Any]:
                 "ask only for context",
             ),
             "owner_boundary": (
-                "before inspecting its code, schema, data, or runtime",
-                "return the receipt without monitoring",
+                "inspect its code, schema, or declared configuration read-only",
+                "terra dispatches approved worker units",
             ),
             "state_distinction": (
                 "intended schema and configuration in source",
@@ -1718,7 +1731,7 @@ def compare(args: argparse.Namespace) -> dict[str, Any]:
                 "does not edit a plugin cache directly",
             ),
             "preservation_boundary": (
-                "protected user state",
+                "protected-state",
                 "existing hubs stay on their generated template version",
                 "does not run setup or bootstrap",
             ),
@@ -1885,7 +1898,7 @@ def compare(args: argparse.Namespace) -> dict[str, Any]:
                 "Open",
                 "Not Applicable",
                 "Not Reviewed",
-                "generated CKL does not prove",
+                "CKL file creation does not prove",
             ),
             "ownership_and_gates": (
                 "$kepler-development",
@@ -2221,37 +2234,37 @@ def compare(args: argparse.Namespace) -> dict[str, Any]:
                     f"{field} must equal {expected!r}; received {actual!r}"
                 )
 
-        generated_hub_value = runtime_evidence.get("generated_hub_path")
-        generated_hub = (
-            Path(generated_hub_value).expanduser()
-            if isinstance(generated_hub_value, str) and generated_hub_value
+        control_project_value = runtime_evidence.get("control_project_path")
+        control_project = (
+            Path(control_project_value).expanduser()
+            if isinstance(control_project_value, str) and control_project_value
             else None
         )
-        if generated_hub is None:
+        if control_project is None:
             validation_failures.append(
-                "generated_hub_path must be a non-empty filesystem path"
+                "control_project_path must be a non-empty filesystem path"
             )
         else:
-            if not generated_hub.is_dir():
+            if not control_project.is_dir():
                 validation_failures.append(
-                    f"generated_hub_path does not exist as a directory: {generated_hub}"
+                    f"control_project_path does not exist as a directory: {control_project}"
                 )
-            elif not (generated_hub / "kepler.yaml").is_file():
+            elif not (control_project / "kepler.yaml").is_file():
                 validation_failures.append(
-                    "generated_hub_path must contain kepler.yaml"
+                    "control_project_path must contain kepler.yaml"
                 )
-            elif (generated_hub / f"{SOURCE_CONTROL_TOKEN}.yaml").exists():
+            elif (control_project / f"{SOURCE_CONTROL_TOKEN}.yaml").exists():
                 validation_failures.append(
-                    f"generated_hub_path must not contain {SOURCE_CONTROL_TOKEN}.yaml"
+                    f"control_project_path must not contain {SOURCE_CONTROL_TOKEN}.yaml"
                 )
             else:
                 aligned, alignment_evidence = generated_template_alignment(
-                    candidate, generated_hub
+                    candidate, control_project
                 )
-                runtime_evidence["generated_template_alignment"] = alignment_evidence
+                runtime_evidence["control_project_template_alignment"] = alignment_evidence
                 if not aligned:
                     validation_failures.append(
-                        "generated_hub_path does not match the current candidate "
+                        "control_project_path does not match the current candidate "
                         "template managed surface"
                     )
 
@@ -2305,28 +2318,28 @@ def compare(args: argparse.Namespace) -> dict[str, Any]:
             validation_failures.append(
                 "runtime_acceptance must contain exactly the three required results"
             )
-        setup_result = by_name.get(
-            "installed_setup_and_exact_path_project_registration", {}
-        )
-        bridge_result = by_name.get("installed_bulk_bridge_configuration", {})
-        dispatch_result = by_name.get(
-            "installed_worker_search_create_resume_and_no_monitoring", {}
-        )
+        setup_result = by_name.get("installed_project_first_setup_and_exact_identity", {})
+        model_result = by_name.get("installed_sol_terra_model_binding", {})
+        dispatch_result = by_name.get("installed_worker_create_resume_result_and_no_monitoring", {})
         runtime_assertions_pass = (
             required_runtime.issubset(by_name)
             and all(by_name[name].get("status") == "passed" for name in required_runtime)
-            and setup_result.get("exact_path_match") is True
-            and bool(setup_result.get("runtime_project_id"))
-            and bridge_result.get("logical_project_key")
-            != bridge_result.get("runtime_project_id")
-            and bool(bridge_result.get("runtime_project_id"))
-            and bridge_result.get("no_implementation_task_created") is True
+            and setup_result.get("exact_path_matches", 0) >= 2
+            and setup_result.get("repository_scan_performed") is False
+            and setup_result.get("workload_topology_present") is False
+            and setup_result.get("selected_project_mutation") is False
+            and setup_result.get("bridge_required") is False
+            and model_result.get("sol_effective_model") == "gpt-5.6-sol"
+            and model_result.get("terra_effective_model") == "gpt-5.6-terra"
+            and model_result.get("stale_revision_rejected") is True
             and dispatch_result.get("create_task_id")
             and dispatch_result.get("resume_task_id")
             and dispatch_result.get("create_task_id")
             == dispatch_result.get("resume_task_id")
             and dispatch_result.get("runtime_project_id_used") is True
             and dispatch_result.get("monitoring_after_receipt") is False
+            and dispatch_result.get("worker_result_ingested") is True
+            and dispatch_result.get("transcript_sync") is False
         )
         if not required_runtime.issubset(by_name):
             validation_failures.append(
@@ -2348,7 +2361,7 @@ def compare(args: argparse.Namespace) -> dict[str, Any]:
             status="matched" if runtime_pass else "unresolved",
             mandatory=True,
             scope="runtime",
-            mapping="Native registration or supported open-folder fallback must be verified by an exact path in the refreshed live project list; create/resume response is the receipt and monitoring stops.",
+            mapping="Installed project-first setup must select existing saved projects by opaque ID and exact path; Sol/Terra model identities, create/resume receipts, WorkerResult ingestion, and receipt-stop must be observed directly.",
             probe_name="installed-plugin fresh-task acceptance",
             passed=runtime_pass,
             evidence=runtime_evidence,
@@ -2515,9 +2528,9 @@ def compare(args: argparse.Namespace) -> dict[str, Any]:
             if isinstance(item, dict) and isinstance(item.get("name"), str)
         }
         required_preservation = {
-            "hub_doctor",
-            "hub_git_status",
-            "attached_repository_git_status",
+            "control_project_doctor",
+            "control_project_git_status",
+            "selected_project_git_status",
             "ignored_state",
         }
         missing_preservation = required_preservation - preservation_by_name.keys()
@@ -2548,9 +2561,8 @@ def compare(args: argparse.Namespace) -> dict[str, Any]:
     )
 
     setup_connection_required = {
-        "setup_repository_discovery_read_only",
-        "setup_attached_reference_bridge_portable",
-        "setup_connect_idempotent_and_preserves_tracked_files",
+        "project_first_setup_exact_identity",
+        "no_default_workload_topology",
     }
     setup_connection_static_pass, setup_connection_static = static_contains(
         [
@@ -2562,20 +2574,20 @@ def compare(args: argparse.Namespace) -> dict[str, Any]:
             candidate / "hub" / "schemas" / "repository-declarations.schema.json",
         ],
         {
-            "natural_language_setup": ("set up kepler", "connect repositories"),
-            "deterministic_commands": ("setup plan", "setup connect"),
-            "attached_portability": ("placement: attached", "ignored local state"),
-            "safe_bridge_default": ("reference", "tracked repository files"),
+            "explicit_setup": ("/kepler setup", "setup apply"),
+            "live_project_identity": ("opaque runtime", "exact normalized path"),
+            "no_repository_scan": ("repository scan", "selected-project mutation"),
+            "optional_bridges": ("optional", "bridge"),
         },
     )
     records.append(
         surface(
-            "one_prompt_repository_connection",
+            "project_first_existing_project_setup",
             status="added",
             mandatory=True,
             scope="local",
-            mapping="Initial setup now discovers repositories only under an authorized root, attaches them without moving checkout state, records portable declarations plus ignored exact paths, and installs safe local reference bridges.",
-            probe_name="setup discovery, attached portability, and idempotent bridge harness",
+            mapping="Initial setup selects existing saved Codex projects by exact live identity, confirms an ArchitectureMap, and leaves repository contents, Git state, and bridges unchanged.",
+            probe_name="project-first exact-identity and no-workload setup harness",
             passed=(
                 acceptance_pass
                 and setup_connection_required.issubset(probe_names)

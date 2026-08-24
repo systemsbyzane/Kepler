@@ -1,90 +1,68 @@
-# Public repository and plugin readiness
+# Kepler release readiness
 
-The repository is publicly readable and can serve the plugin directly through
-Codex's Git marketplace support. A Kepler version is release-ready only
-when every mandatory item below is satisfied.
+A release is ready only when every mandatory item below is evidenced.
 
-## Portable content
+## Product invariants
 
-- plugin manifest and repo marketplace validate;
-- strict source, generated-Hub, and plugin inventories are fully classified by
-  the tracked process-parity manifest;
-- every skill validates and has accurate interface metadata;
-- all visible and hidden distributable text passes the deterministic
-  de-branding scan;
-- only synthetic fixtures are distributed;
-- generated program workspaces ignore real evidence and outputs;
-- no credentials, private URLs, live topology, task history, findings, or
-  controlled artifacts are present.
+- `/kepler setup` starts in a `Kepler-<company>` control project and selects
+  existing saved Codex projects by live opaque ID and exact normalized path.
+- Setup never asks for or scans a repositories root; it does not clone, move,
+  import, open, register, or edit selected projects.
+- The generated template contains no development, charts, patching, research,
+  environments, compliance, Mission, or Operation workload topology and no
+  pseudo-projects or clone roots.
+- ArchitectureMap workspaces/domains replace workload ownership.
+- Bridges are absent by default and not required for setup or dispatch.
+  Explicitly configured bridges fail closed on missing or drifting state.
+- Sol uses requested/effective `gpt-5.6-sol` evidence and may inspect selected
+  projects read-only while planning.
+- Terra uses requested/effective `gpt-5.6-terra` evidence, dispatches the exact
+  current Plan revision and project, returns the receipt, and stops.
+- Workers are ordinary, directly accessible Codex tasks. ContextPacks are
+  provenance-bearing initial context, never an exclusive boundary.
+- WorkerResults, not transcripts or task-state inference, advance readiness.
+- Natural language supplies objectives and Plan refinements. Setup, dispatch,
+  review, status, and Doctor state changes use explicit `/kepler` commands.
 
-## Functional behavior
+## Local source gates
 
-- typed tasks, workflows, approvals, gates, evidence, checks, risks, blockers,
-  repository roles, and transitions have semantic mappings and probes;
-- Doctor, status, route plan, repo plan, onboarding, bridge modes, declarative
-  bulk bridge planning/application, per-repository receipts, compliance
-  sidecars, automation safety, and no-monitoring behavior pass local probes;
-- setup generation is atomic, non-merging, idempotent, and fail-closed;
-- the preview-first bootstrap refuses unmanaged or managed-template-drifting
-  targets, preserves valid configured topology and repository declarations, and
-  validates recognized generated Hubs without overwriting them;
-- DOCX, PDF, and XLSX integrations verify installed system capabilities and
-  their render/inspect/iterate gates without copying implementations;
-- adaptive STIG evaluation, evidence/applicability and inherited-control
-  validation, draft-versus-export readiness, Helm remediation planning,
-  conservative summary extraction, CKL generation, parsing, and deterministic
-  round trip pass.
-- the release ledger latest version matches the plugin manifest, patch-note
-  ranges never invent unknown history, and upgrade planning distinguishes local
-  from Git marketplace refresh behavior;
-- the plugin lifecycle contract uses a supported same-plugin reinstall without
-  uninstalling first, protects generated Hubs and repositories, and keeps Hub
-  migration separate and explicit.
-- generated Hubs publish a versioned capability contract; installed skills
-  check requested Hub-local commands and documents before use, and incompatible
-  preserved Hubs return a read-only plan-and-diff migration scope without
-  regeneration or mutation.
+- plugin manifest and marketplace validation;
+- every skill quick validator;
+- all Ruby and Python tests;
+- JSON, YAML, and JSON Schema parsing;
+- fresh atomic setup generation and generated Doctor;
+- no-workload-topology assertion;
+- de-branding and setup-link validation;
+- deterministic STIG round trip;
+- local acceptance harness;
+- semantic parity comparison and its functional probes;
+- full diff review and final `git status`.
 
-## Runtime acceptance
+Local gates must distinguish observed runtime behavior from source assertions.
+They cannot prove installed skill discovery, model selection, or task dispatch.
 
-After installation, execute the setup skill's
-`references/installed-acceptance.md` in a fresh task. Require live exact-path
-project verification and a real create/resume dispatch receipt. Confirm the Hub
-stops without monitoring. Evidence must match the current Kepler runtime
-schema, plugin version, candidate root, and preserved synthetic Hub; stale
-predecessor evidence is invalid. Local tests cannot satisfy these checks.
+## Installed clean-profile gates
 
-An installed plugin-upgrade check is also runtime acceptance. With explicit
-authorization, record the exact prior and target versions, marketplace source,
-structured refresh/reinstall results, unchanged synthetic Hub and attached
-repository state, and a fresh task that exposes the target skills. Source tests
-or patch-note output alone cannot satisfy it.
+After explicit installation authorization, follow the setup skill's
+`references/installed-acceptance.md` in a clean profile and fresh tasks.
+Require verified public-Git and local-development installation commands, exact
+plugin version, two selected existing projects, confirmed ArchitectureMap,
+Doctor, Plan revision/refinement, stale revision rejection, Sol and Terra
+model evidence, create and resume receipts, direct worker access, structured
+WorkerResult ingestion, next-unit readiness, no transcript sync, receipt-stop,
+and before/after Git status.
 
-## External decisions and dependencies
+A missing exact identity, model value, runtime receipt, or fresh-task result is
+`blocked`, never inferred success.
 
-- No license file is intentionally included in this public source-available
-  distribution. Do not add one unless the owner explicitly changes that
-  decision.
-- Provider metadata and authentication tools are optional runtime dependencies.
-- Codex project registration depends on the capabilities available in the
-  installed runtime; supported UI open-folder is the fallback.
-- Artifact workflows depend on installed `documents`, `pdf`, and
-  `Spreadsheets` capabilities and their bundled workspace runtime.
-- Remote validation depends on a separately configured, authorized project.
+## External decisions
 
-Do not claim plugin readiness while any mandatory local probe is unresolved or
-runtime acceptance remains unexecuted. Public GitHub availability and
-successful source installation do not replace those acceptance checks.
+- This source-available distribution intentionally has no license file.
+- Plugin installation, cache mutation, commit, push, pull request, publication,
+  deployment, shared-environment mutation, and archiving a legacy repository
+  each retain their explicit authorization boundary.
+- Record the owner's final disposition for the unrelated private
+  `Kepler-legacy` repository; migration never modifies its contents.
 
-Run the source-backed local gate with:
-
-```sh
-make release-validate \
-  SOURCE_HUB=/absolute/path/to/read-only-reference-hub \
-  PRIVATE_NEUTRALIZATION_MAP=.kepler-local/private-neutralization.json
-```
-
-`make validate` remains the self-contained plugin/candidate suite; it cannot
-establish source inventory or semantic parity without an explicit read-only
-reference. The required private-neutralization map is an ignored local input;
-it must not be committed, packaged, installed, or copied into generated Hubs.
+Do not claim readiness while any local gate, installed runtime gate, or owner
+decision remains unresolved.

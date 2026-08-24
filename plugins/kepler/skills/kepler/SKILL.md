@@ -6,7 +6,7 @@ description: Coordinate context-aware engineering work across existing Codex pro
 # Kepler
 
 Requests to **set up Kepler** or **connect repositories** route to
-`$kepler-setup`.
+`$kepler-setup`, which selects existing saved Codex projects by exact identity.
 
 Kepler is the coordination and knowledge layer around ordinary Codex workers:
 
@@ -29,11 +29,20 @@ Ordinary conversation may refine an active Plan. Every material change creates a
 
 ## Sol
 
-Sol identifies affected workspaces/domains/paths, dependencies, safe concurrency, constraints, success criteria, useful memory, and ContextPack inputs. Sol is not the default implementation worker.
+Sol runs on `gpt-5.6-sol` with high reasoning. It identifies affected
+workspaces/domains/paths, dependencies, safe concurrency, constraints, success
+criteria, useful memory, and ContextPack inputs. It may inspect selected
+projects read-only while planning and records requested/effective runtime
+evidence. Sol is not the default implementation worker.
 
 ## Terra
 
-Terra receives one approved ready unit and its compiled ContextPack, verifies the exact Codex project and path, creates or resumes the normal worker, returns the receipt, records it with `bin/kepler dispatch record`, and stops. Terra must not re-plan, invent a target, implement, summarize the worker, or monitor it.
+Terra runs on `gpt-5.6-terra` with high reasoning. It receives one approved
+ready unit and its compiled ContextPack, verifies the exact Codex project and
+path, creates or resumes the normal worker, returns the receipt with requested
+and effective runtime fields, records it with `bin/kepler dispatch record`, and
+stops. Terra must not re-plan, invent a target, implement, summarize the
+worker, or monitor it.
 
 Read `references/dispatch.md` before dispatch. Preserve exact-project verification, the selected runtime/mode, and receipt-and-stop behavior.
 

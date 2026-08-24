@@ -37,7 +37,7 @@ class RuntimeAcceptanceContractTest(unittest.TestCase):
             installed,
         )
         self.assertIn(
-            "installed_worker_search_create_resume_and_no_monitoring",
+            "installed_worker_create_resume_result_and_no_monitoring",
             installed,
         )
 

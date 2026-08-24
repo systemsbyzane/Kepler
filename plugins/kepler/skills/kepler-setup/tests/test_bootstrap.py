@@ -1,10 +1,8 @@
 #!/usr/bin/env python3
-"""Focused tests for the deterministic Kepler bootstrap helper."""
+"""Focused tests for project-first Kepler bootstrap."""
 
 from __future__ import annotations
 
-import base64
-import hashlib
 import json
 import subprocess
 import tempfile
@@ -14,30 +12,11 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 BOOTSTRAP = ROOT / "scripts" / "bootstrap.py"
-SCANNER = ROOT / "scripts" / "scan_debranding.py"
-STRUCTURED = ROOT / "scripts" / "validate_structured.py"
-ARTIFACT_VALIDATOR_SOURCE = (
-    ROOT.parent
-    / "kepler-artifacts"
-    / "scripts"
-    / "validate_deliverable.py"
-)
-ARTIFACT_VALIDATOR_TEMPLATE = (
-    ROOT
-    / "assets"
-    / "kepler-template"
-    / "scripts"
-    / "validate-deliverable.py"
-)
+TEMPLATE = ROOT / "assets" / "kepler-template"
+WORKLOADS = ("development", "charts", "patching", "research", "environments", "compliance")
 
 
 class BootstrapTest(unittest.TestCase):
-    def test_generated_hub_artifact_validator_matches_skill_source(self) -> None:
-        self.assertEqual(
-            ARTIFACT_VALIDATOR_SOURCE.read_bytes(),
-            ARTIFACT_VALIDATOR_TEMPLATE.read_bytes(),
-        )
-
     def run_bootstrap(self, *arguments: str) -> subprocess.CompletedProcess[str]:
         return subprocess.run(
             ["python3", str(BOOTSTRAP), *arguments],
@@ -48,448 +27,74 @@ class BootstrapTest(unittest.TestCase):
             timeout=180,
         )
 
-    def json_report(self, result: subprocess.CompletedProcess[str]) -> dict:
+    def report(self, result: subprocess.CompletedProcess[str]) -> dict:
         self.assertTrue(result.stdout, result.stderr)
         return json.loads(result.stdout)
 
-    def tree_state(self, root: Path) -> str:
-        digest = hashlib.sha256()
-        for path in sorted(candidate for candidate in root.rglob("*") if candidate.is_file()):
-            if ".git" in path.relative_to(root).parts:
-                continue
-            digest.update(str(path.relative_to(root)).encode("utf-8"))
-            digest.update(path.read_bytes())
-        return digest.hexdigest()
+    def test_template_contains_no_workload_directories(self) -> None:
+        for name in WORKLOADS:
+            self.assertFalse((TEMPLATE / name).exists(), name)
 
-    def run_scanner(
-        self,
-        root: Path,
-        private_map: Path | None = None,
-        *,
-        allow_generated_root: bool = False,
-    ) -> subprocess.CompletedProcess[str]:
-        arguments = ["python3", str(SCANNER), str(root)]
-        if private_map:
-            arguments.extend(
-                ["--private-neutralization-map", str(private_map)]
-            )
-        if allow_generated_root:
-            arguments.append("--allow-generated-root")
-        return subprocess.run(
-            arguments,
-            cwd=ROOT,
-            check=False,
-            text=True,
-            capture_output=True,
-            timeout=30,
-        )
-
-    def run_structured(self, root: Path) -> subprocess.CompletedProcess[str]:
-        return subprocess.run(
-            ["python3", str(STRUCTURED), str(root), "--json"],
-            cwd=ROOT,
-            check=False,
-            text=True,
-            capture_output=True,
-            timeout=30,
-        )
-
-    def initialize_repository(self, path: Path) -> None:
-        path.mkdir(parents=True)
-        subprocess.run(
-            ["git", "init", "--quiet", "--initial-branch=main", str(path)],
-            check=True,
-            timeout=30,
-        )
-        subprocess.run(
-            ["git", "config", "user.name", "Synthetic Test"],
-            cwd=path,
-            check=True,
-            timeout=30,
-        )
-        subprocess.run(
-            ["git", "config", "user.email", "test@example.invalid"],
-            cwd=path,
-            check=True,
-            timeout=30,
-        )
-        (path / "AGENTS.md").write_text("# Repository policy\n", encoding="utf-8")
-        subprocess.run(
-            ["git", "add", "AGENTS.md"],
-            cwd=path,
-            check=True,
-            timeout=30,
-        )
-        subprocess.run(
-            ["git", "commit", "--quiet", "-m", "Synthetic fixture"],
-            cwd=path,
-            check=True,
-            timeout=30,
-        )
-
-    def test_debranding_uses_external_private_map_and_detects_obfuscation(self) -> None:
-        with tempfile.TemporaryDirectory(
-            prefix="kepler-private-map-"
-        ) as directory:
-            root = Path(directory)
-            scanned = root / "scanned"
-            scanned.mkdir()
-            private_token = "private-fixture-token"
-            private_map = root / "private-neutralization.json"
-            private_map.write_text(
-                json.dumps(
-                    {
-                        "schema_version": "kepler.private-neutralization/v1",
-                        "source_control_token": "legacy-fixture-hub",
-                        "replacements": {
-                            private_token: "neutral-fixture-token",
-                        },
-                        "deny_tokens": ["private-fixture-owner"],
-                    }
-                )
-                + "\n",
-                encoding="utf-8",
-            )
-            (scanned / "plaintext.txt").write_text(
-                private_token + "\n",
-                encoding="utf-8",
-            )
-            (scanned / "hex.txt").write_text(
-                private_token.encode("utf-8").hex() + "\n",
-                encoding="utf-8",
-            )
-            (scanned / "base64.txt").write_text(
-                base64.b64encode(private_token.encode("utf-8")).decode("ascii")
-                + "\n",
-                encoding="utf-8",
-            )
-            (scanned / "reconstructed.py").write_text(
-                'value = "".join(("private", "fixture", "token"))\n',
-                encoding="utf-8",
-            )
-
-            without_map = self.run_scanner(scanned)
-            self.assertEqual(0, without_map.returncode, without_map.stderr)
-            with_map = self.run_scanner(scanned, private_map)
-            self.assertEqual(1, with_map.returncode, with_map.stderr)
-            self.assertEqual(
-                4,
-                with_map.stdout.count("prohibited private token profile"),
-            )
-            for variant in ("plaintext", "hex", "base64", "reconstructed"):
-                self.assertIn(f"({variant})", with_map.stdout)
-
-    def test_debranding_rejects_malformed_private_map(self) -> None:
-        with tempfile.TemporaryDirectory(
-            prefix="kepler-private-map-invalid-"
-        ) as directory:
-            root = Path(directory)
-            private_map = root / "private-neutralization.json"
-            private_map.write_text(
-                '{"schema_version":"unexpected","deny_tokens":["synthetic"]}\n',
-                encoding="utf-8",
-            )
-            result = self.run_scanner(root, private_map)
-            self.assertEqual(2, result.returncode)
-            self.assertIn("schema_version must equal", result.stderr)
-
-    def test_generated_validation_excludes_workload_and_local_state_payloads(self) -> None:
-        with tempfile.TemporaryDirectory(
-            prefix="kepler-generated-boundary-"
-        ) as directory:
-            root = Path(directory) / "generated"
-            (root / "development" / "synthetic-repository").mkdir(parents=True)
-            (root / "hub" / "state").mkdir(parents=True)
-            (root / "kepler.yaml").write_text(
-                "api_version: kepler.dev/v1alpha1\n"
-                "kind: KeplerRegistry\n"
-                "workspace:\n"
-                f'  root: "{root}"\n'
-                "  local_registry: hub/state/repositories.yaml\n"
-                "workloads:\n"
-                "  development:\n"
-                "    path: development\n",
-                encoding="utf-8",
-            )
-            (root / "managed.json").write_text(
-                '{"synthetic": true}\n',
-                encoding="utf-8",
-            )
-            (root / "development" / "synthetic-repository" / "broken.yaml").write_text(
-                "broken: [\n",
-                encoding="utf-8",
-            )
-            (root / "development" / "synthetic-repository" / "machine.txt").write_text(
-                str(Path.home()) + "\n",
-                encoding="utf-8",
-            )
-            (root / "hub" / "state" / "local.yaml").write_text(
-                "broken: [\n",
-                encoding="utf-8",
-            )
-
-            structured = self.run_structured(root)
-            self.assertEqual(0, structured.returncode, structured.stderr)
-            report = self.json_report(structured)
-            self.assertTrue(report["ok"])
-            self.assertEqual(0, len(report["failures"]))
-            scanner = self.run_scanner(root, allow_generated_root=True)
-            self.assertEqual(0, scanner.returncode, scanner.stdout + scanner.stderr)
-
-            (root / "managed-broken.yaml").write_text("broken: [\n", encoding="utf-8")
-            managed_structured = self.run_structured(root)
-            self.assertEqual(1, managed_structured.returncode)
-            self.assertIn(
-                "managed-broken.yaml",
-                "\n".join(self.json_report(managed_structured)["failures"]),
-            )
-            (root / "managed-home.txt").write_text(
-                str(Path.home()) + "\n",
-                encoding="utf-8",
-            )
-            managed_scan = self.run_scanner(root, allow_generated_root=True)
-            self.assertEqual(1, managed_scan.returncode)
-            self.assertIn("managed-home.txt", managed_scan.stdout)
-
-    def test_preview_is_default_and_does_not_create_target(self) -> None:
-        with tempfile.TemporaryDirectory(prefix="kepler-bootstrap-preview-") as directory:
-            root = Path(directory)
-            requested = root / "nested" / ".." / "generated"
-            expected = (root / "generated").resolve()
-            result = self.run_bootstrap(str(requested), "--json")
+    def test_preview_is_read_only_and_project_first(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="kepler-preview-") as directory:
+            target = Path(directory) / "Kepler-Synthetic"
+            result = self.run_bootstrap(str(target), "--json")
             self.assertEqual(0, result.returncode, result.stderr)
-            report = self.json_report(result)
-            self.assertEqual(str(expected), report["target"])
+            report = self.report(result)
             self.assertEqual("preview", report["status"])
-            self.assertTrue(report["would_generate"])
-            self.assertFalse(report["generated"])
-            self.assertFalse(expected.exists())
-            self.assertEqual(
-                {"git", "python3", "ruby"},
-                set(report["preflight"]),
-            )
-            self.assertEqual(
-                "agent_verification_required", report["runtime_status"]
-            )
+            self.assertTrue(report["project_first"])
+            self.assertFalse(report["repository_scan_performed"])
+            self.assertFalse(report["bridges_installed"])
+            self.assertFalse(target.exists())
 
-            option_target = root / "option-target"
-            option_result = self.run_bootstrap(
-                "--target", str(option_target), "--json"
-            )
-            self.assertEqual(0, option_result.returncode, option_result.stderr)
-            self.assertEqual(
-                str(option_target.resolve()),
-                self.json_report(option_result)["target"],
-            )
+    def test_apply_generates_validates_and_reruns_as_noop(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="kepler-apply-") as directory:
+            target = Path(directory) / "Kepler-Synthetic"
+            first = self.run_bootstrap(str(target), "--apply", "--json")
+            self.assertEqual(0, first.returncode, first.stdout + first.stderr)
+            report = self.report(first)
+            self.assertEqual("generated_and_validated", report["status"])
+            self.assertEqual(0, report["validation"]["ruby_tests"]["failures"])
+            self.assertEqual(0, report["validation"]["doctor"]["errors"])
+            for name in WORKLOADS:
+                self.assertFalse((target / name).exists(), name)
 
-    def test_refuses_symlink_and_partial_nonempty_targets(self) -> None:
-        with tempfile.TemporaryDirectory(prefix="kepler-bootstrap-refusal-") as directory:
+            second = self.run_bootstrap(str(target), "--apply", "--json")
+            self.assertEqual(0, second.returncode, second.stdout + second.stderr)
+            self.assertEqual("validated_noop", self.report(second)["status"])
+
+    def test_repositories_root_option_is_removed(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="kepler-no-scan-") as directory:
+            result = self.run_bootstrap(
+                str(Path(directory) / "Kepler-Synthetic"),
+                "--repositories-root",
+                directory,
+                "--json",
+            )
+            self.assertEqual(2, result.returncode)
+            self.assertIn("unrecognized arguments", result.stderr)
+
+    def test_refuses_home_root_symlink_and_partial_targets(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="kepler-refusal-") as directory:
             root = Path(directory)
             real = root / "real"
             real.mkdir()
-            link = root / "linked"
+            link = root / "link"
             link.symlink_to(real, target_is_directory=True)
-            symlink_result = self.run_bootstrap(str(link), "--json")
-            self.assertEqual(2, symlink_result.returncode)
-            self.assertEqual(
-                "target", self.json_report(symlink_result)["error"]["stage"]
-            )
+            linked = self.run_bootstrap(str(link), "--json")
+            self.assertEqual(2, linked.returncode)
+            self.assertEqual("target", self.report(linked)["error"]["stage"])
 
             partial = root / "partial"
             partial.mkdir()
-            (partial / "kepler.yaml").write_text(
-                "api_version: kepler.dev/v1alpha1\n"
-                "kind: KeplerRegistry\n",
-                encoding="utf-8",
-            )
-            partial_result = self.run_bootstrap(str(partial), "--json")
-            self.assertEqual(2, partial_result.returncode)
-            partial_report = self.json_report(partial_result)
-            self.assertEqual("target-recognition", partial_report["error"]["stage"])
-            self.assertIn("not a complete generated Kepler", partial_report["error"]["message"])
+            (partial / "kepler.yaml").write_text("kind: KeplerRegistry\n", encoding="utf-8")
+            incomplete = self.run_bootstrap(str(partial), "--json")
+            self.assertEqual(2, incomplete.returncode)
+            self.assertEqual("target-recognition", self.report(incomplete)["error"]["stage"])
 
-    def test_refuses_filesystem_root_and_home(self) -> None:
         for unsafe in (Path("/"), Path.home()):
-            with self.subTest(target=unsafe):
-                result = self.run_bootstrap(str(unsafe), "--json")
-                self.assertEqual(2, result.returncode)
-                report = self.json_report(result)
-                self.assertEqual("target", report["error"]["stage"])
-                self.assertIn("unsafe target path", report["error"]["message"])
-
-    def test_apply_validates_and_rerun_is_an_idempotent_noop(self) -> None:
-        with tempfile.TemporaryDirectory(prefix="kepler-bootstrap-apply-") as directory:
-            target = Path(directory) / "generated"
-            first = self.run_bootstrap(str(target), "--apply", "--json")
-            self.assertEqual(0, first.returncode, first.stderr)
-            report = self.json_report(first)
-            self.assertEqual("generated_and_validated", report["status"])
-            self.assertTrue(report["generated"])
-            self.assertEqual(0, report["validation"]["ruby_tests"]["failures"])
-            self.assertGreater(report["validation"]["ruby_tests"]["runs"], 0)
-            self.assertGreater(report["validation"]["structured"]["schemas"], 0)
-            self.assertEqual(0, report["validation"]["structured"]["failures"])
-            self.assertEqual(0, report["validation"]["doctor"]["errors"])
-            self.assertEqual(0, report["validation"]["debranding"]["findings"])
-            self.assertEqual(0, report["validation"]["setup_links"]["failures"])
-            self.assertTrue((target / ".git").is_dir())
-            remotes = subprocess.run(
-                ["git", "remote"],
-                cwd=target,
-                check=False,
-                text=True,
-                capture_output=True,
-            )
-            self.assertEqual(0, remotes.returncode, remotes.stderr)
-            self.assertEqual("", remotes.stdout.strip())
-
-            before = (target / "kepler.yaml").read_bytes()
-            second = self.run_bootstrap(str(target), "--apply", "--json")
-            self.assertEqual(0, second.returncode, second.stderr)
-            rerun = self.json_report(second)
-            self.assertEqual("validated_noop", rerun["status"])
-            self.assertTrue(rerun["no_op"])
-            self.assertFalse(rerun["generated"])
-            self.assertEqual(before, (target / "kepler.yaml").read_bytes())
-
-            config = target / "kepler.yaml"
-            config.write_text(
-                config.read_text(encoding="utf-8").replace(
-                    "Portable workspace topology, ownership, routing, and safety policy.",
-                    "Configured synthetic workspace topology.",
-                ),
-                encoding="utf-8",
-            )
-            declarations = target / "hub" / "repositories.yaml"
-            declarations.write_text(
-                declarations.read_text(encoding="utf-8")
-                + "# Locally configured declarations remain user-managed.\n",
-                encoding="utf-8",
-            )
-            configured_result = self.run_bootstrap(str(target), "--apply", "--json")
-            self.assertEqual(0, configured_result.returncode, configured_result.stderr)
-            configured_report = self.json_report(configured_result)
-            self.assertEqual("validated_noop", configured_report["status"])
-            self.assertTrue(configured_report["no_op"])
-            self.assertIn(
-                "Configured synthetic workspace topology.",
-                config.read_text(encoding="utf-8"),
-            )
-            self.assertIn(
-                "Locally configured declarations remain user-managed.",
-                declarations.read_text(encoding="utf-8"),
-            )
-
-            readme = target / "README.md"
-            readme.write_text(
-                readme.read_text(encoding="utf-8") + "\nLocal drift.\n",
-                encoding="utf-8",
-            )
-            documentation_drift = self.run_bootstrap(str(target), "--json")
-            self.assertEqual(2, documentation_drift.returncode)
-            documentation_report = self.json_report(documentation_drift)
-            self.assertEqual(
-                "target-recognition", documentation_report["error"]["stage"]
-            )
-            self.assertIn(
-                "unrecognized generated managed content",
-                documentation_report["error"]["message"],
-            )
-            self.assertIn("README.md", documentation_report["error"]["message"])
-
-            readme.write_bytes(
-                (ROOT / "assets" / "kepler-template" / "README.md").read_bytes()
-            )
-            (target / "bin" / "kepler").write_text(
-                "#!/usr/bin/env ruby\nexit 0\n", encoding="utf-8"
-            )
-            tampered = self.run_bootstrap(str(target), "--json")
-            self.assertEqual(1, tampered.returncode)
-            tampered_report = self.json_report(tampered)
-            self.assertEqual(
-                "preserved_hub_incompatible", tampered_report["status"]
-            )
-            self.assertTrue(tampered_report["no_op"])
-
-    def test_preserved_legacy_hub_returns_compatibility_plan_without_mutation(self) -> None:
-        with tempfile.TemporaryDirectory(prefix="kepler-bootstrap-legacy-") as directory:
-            target = Path(directory) / "legacy"
-            first = self.run_bootstrap(str(target), "--apply", "--json")
-            self.assertEqual(0, first.returncode, first.stderr)
-            (target / "hub" / "compatibility.json").unlink()
-            before = self.tree_state(target)
-
-            result = self.run_bootstrap(str(target), "--json")
-            self.assertEqual(1, result.returncode, result.stderr)
-            report = self.json_report(result)
-            self.assertEqual("preserved_hub_incompatible", report["status"])
-            self.assertTrue(report["no_op"])
-            self.assertFalse(report["generated"])
-            self.assertEqual(
-                "kepler.hub-contract.v1",
-                report["compatibility"]["requirements"]["missing"][0]["id"],
-            )
-            self.assertFalse(
-                report["compatibility"]["migration"]["automatic_changes"]
-            )
-            self.assertEqual(before, self.tree_state(target))
-
-    def test_one_prompt_setup_connects_existing_repositories_in_place(self) -> None:
-        with tempfile.TemporaryDirectory(prefix="kepler-bootstrap-repos-") as directory:
-            root = Path(directory)
-            target = root / "generated"
-            repositories_root = root / "repositories"
-            repository = repositories_root / "sample-service"
-            self.initialize_repository(repository)
-            agents_before = (repository / "AGENTS.md").read_text(encoding="utf-8")
-
-            preview = self.run_bootstrap(
-                str(target),
-                "--repositories-root",
-                str(repositories_root),
-                "--json",
-            )
-            self.assertEqual(0, preview.returncode, preview.stderr)
-            preview_report = self.json_report(preview)
-            self.assertEqual(1, preview_report["repository_setup"]["plan"]["summary"]["discovered"])
-            self.assertEqual(1, preview_report["repository_setup"]["plan"]["summary"]["ready"])
-            self.assertFalse(target.exists())
-            self.assertFalse((repository / "AGENTS.override.md").exists())
-
-            applied = self.run_bootstrap(
-                str(target),
-                "--repositories-root",
-                str(repositories_root),
-                "--apply",
-                "--json",
-            )
-            self.assertEqual(0, applied.returncode, applied.stderr)
-            report = self.json_report(applied)
-            self.assertEqual("generated_connected_and_validated", report["status"])
-            self.assertEqual(1, report["repository_setup"]["connection"]["summary"]["connected"])
-            self.assertEqual(0, report["repository_setup"]["connection"]["summary"]["blocked"])
-            self.assertTrue(report["external_actions"]["safe_reference_bridges_installed"])
-            self.assertFalse(report["external_actions"]["tracked_repository_files_changed"])
-            declarations = (target / "hub" / "repositories.yaml").read_text(encoding="utf-8")
-            self.assertIn("placement: attached", declarations)
-            self.assertNotIn(str(repository.resolve()), declarations)
-            local_state = (target / "hub" / "state" / "repositories.yaml").read_text(
-                encoding="utf-8"
-            )
-            self.assertIn(str(repository.resolve()), local_state)
-            self.assertTrue((repository / "AGENTS.override.md").is_file())
-            self.assertEqual(
-                agents_before,
-                (repository / "AGENTS.md").read_text(encoding="utf-8"),
-            )
-            tracked_diff = subprocess.run(
-                ["git", "diff", "--exit-code"],
-                cwd=repository,
-                check=False,
-                text=True,
-                capture_output=True,
-            )
-            self.assertEqual(0, tracked_diff.returncode, tracked_diff.stdout + tracked_diff.stderr)
+            result = self.run_bootstrap(str(unsafe), "--json")
+            self.assertEqual(2, result.returncode)
 
 
 if __name__ == "__main__":

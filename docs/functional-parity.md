@@ -40,23 +40,23 @@ Mandatory local surfaces are:
 - `/kepler` command behavior and read-only/state-changing boundaries;
 - budgeted and explainable context/memory retrieval, failed-attempt reuse,
   supersession, and targeted upstream handoffs;
-- Doctor finding categories, stable identities, repository state, no-fetch
-  caveat, compliance parity, bridge integrity, and automation safety;
-- route, registration, onboarding, worker receipt, and no-monitoring contracts;
-- reference, materialized, and repo-native bridge behavior;
-- declarative repositories, bulk read-only planning, safe/idempotent apply,
-  per-repository receipts, natural-language setup triggers, and exact project
-  verification states, including a stable logical key that deliberately differs
-  from the opaque runtime project ID and rejection of the legacy self-equality
-  record;
+- project-first Doctor checks, stable exact project identities, confirmed
+  ArchitectureMap state, model configuration, optional-bridge integrity, and
+  automation safety;
+- live saved-project selection, no repository-root scan, no selected-project
+  mutation, no default workload topology, worker receipts, and no monitoring;
+- dispatch without a bridge plus fail-closed reference, materialized, and
+  repo-native behavior when a bridge is explicitly configured;
+- exact project verification states, including a stable logical key distinct
+  from the opaque runtime project ID, and display-name-only rejection;
 - setup, artifact capability preflight, and acceptance runbooks;
-- active Hub skill triggers and automation method;
+- explicit `/kepler` control commands, focused skill triggers, and automation method;
 - adaptive STIG evaluation, evidence/applicability validation,
   draft-versus-export readiness, remediation routing, Helm planning, summary
   extraction, and CKL tools;
 - exact-version plugin upgrade planning, deterministic patch notes,
   preservation boundaries, supported reinstall commands, approval gates, and
-  generated-Hub lifecycle separation;
+  generated-control-project lifecycle separation;
 - reusable architecture, security, patching, review, compliance, and template
   methods, including the documentation index, Codex UI model, and retained
   neutral coordination and compliance-workbench guidance.
@@ -69,8 +69,10 @@ v1 probes above.
 
 Organization-specific topology, repositories, program facts, credentials, live
 tasks, evidence, generated findings, and controlled artifacts are mandatory
-exclusions, not parity gaps. Runtime Codex UI registration and dispatch remain
-unresolved until installed fresh-task acceptance is actually executed and its
-evidence proves exact-path ID capture, create-versus-resume, and the
-no-monitoring boundary. A locally tested upgrade planner cannot prove that an
-installed upgrade succeeded or that refreshed skills loaded in a new task.
+exclusions, not parity gaps. Runtime project listing, model binding, and
+dispatch remain unresolved until installed fresh-task acceptance is executed
+and its evidence proves at least two exact-path/opaque-ID matches, requested
+and effective Sol/Terra identities, create-versus-resume, WorkerResult
+ingestion, and the no-monitoring boundary. A locally tested upgrade planner
+cannot prove that an installed upgrade succeeded or that refreshed skills
+loaded in a new task.

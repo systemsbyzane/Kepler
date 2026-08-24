@@ -2,7 +2,7 @@
   "schema_version": "kepler.hub-compatibility/v1",
   "schema": "hub/schemas/hub-compatibility.schema.json",
   "product": "kepler",
-  "template_version": "1.0.0",
+  "template_version": "1.1.0",
   "capabilities": {
     "kepler.command.doctor.v1": {
       "kind": "command",
@@ -126,11 +126,11 @@
         "mode": "stop_and_plan_migration"
       }
     },
-    "kepler.command.setup-connect.v1": {
+    "kepler.command.setup-apply.v2": {
       "kind": "command",
-      "description": "Explicit repository discovery, declaration, and safe bridge apply command.",
+      "description": "Explicit saved-project selection and confirmed ArchitectureMap apply command.",
       "probe": {
-        "help_contains": "bin/kepler setup connect "
+        "help_contains": "bin/kepler setup apply "
       },
       "managed_paths": [
         "bin/kepler",

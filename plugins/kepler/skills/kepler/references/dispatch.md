@@ -8,8 +8,8 @@ re-plans or implements.
 
 - the confirmed ArchitectureMap and exact Plan revision;
 - the compiled ContextPack for each ready unit;
-- Hub policy, registry, adapters, and bridge metadata;
-- read-only route and repository plans;
+- control-project policy, selected-project registry, and optional bridge metadata;
+- the read-only route plan;
 - live saved-project state needed to verify an exact normalized path;
 - recent task IDs, titles, modes, and state needed to find an exact matching
   worker to resume.
@@ -23,35 +23,32 @@ re-plans or implements.
 - monitoring a worker after receipt.
 
 Use the available Codex task or thread creation/resume capability against the
-exact verified runtime project ID. Create every selected independent ready
+exact verified runtime project ID. Create every new Terra dispatcher with
+`model: gpt-5.6-terra` and `thinking: high`; record both requested and
+effective values. Create every selected independent ready
 unit in one dispatch phase. The worker prompt must include the ContextPack,
 its full-capability instruction, and the requirement to return a WorkerResult
 at completion or a material blocker. A successful create/resume response is
 the receipt. Record the task ID/link, runtime project ID, exact project path,
 mode, and authorization boundary with `bin/kepler dispatch record`; then
-return the receipts and stop without monitoring.
+return the receipts and stop without monitoring. Workers remain ordinary
+Codex tasks and keep the user's or saved project's normal runtime.
 
 Reject a waiting unit, a stale or ambiguous Plan revision, a target that does
 not exactly match the confirmed ArchitectureMap, or a ContextPack over its
 budget. Never silently select the latest revision after dispatch preparation.
 
-For repository-owned work, the route plan must report
-`bridge_handoff.status: verified`. Include the complete verified
-`bridge_handoff` unchanged in the worker prompt. It contains the original
-checkout, target and artifact paths, SHA-256 digests, mode, profile, version,
-and instruction order. The worker reads every applicable `AGENTS.md` in its
-active checkout first. When an ignored reference or materialized bridge is
-absent from a Codex Worktree, the worker verifies and reads it from the
-original checkout named in the handoff. Never copy ignored bridge files into
-the Worktree. Refuse dispatch when the bridge record is missing, stale, or
-drifting.
+Bridges are optional. When the route reports `not_configured`, dispatch
+directly and let the worker read its normal project instructions. When a
+workspace explicitly configures a bridge, require
+`bridge_handoff.status: verified`, include the handoff unchanged, and fail
+closed on a missing, stale, or drifting bridge. Never install a bridge as an
+implicit dispatch step.
 
-If registration is needed, verify the exact normalized project path in the
-refreshed live project list after native registration or supported open-folder
-fallback. Keep the stable logical project key separate. Capture the opaque
-runtime project ID only from that exact-path record and use it for worker
-search/resume/create. Never accept a display-name-only match. Refresh and
-retry once. Only then return one manual action.
+Dispatch uses only projects already selected from the refreshed live project
+list during setup. Keep the stable logical key separate from the opaque runtime
+ID and recheck the exact normalized path. Never register, open, clone, or
+substitute a display-name match during dispatch.
 
 Workers remain normal, directly accessible Codex tasks. Do not proxy user
 steering, copy their transcripts, or infer completion from task state. Only a

@@ -15,7 +15,7 @@ separately authorizes a new implementation Plan.
 1. Identify the artifact or Git comparison being reviewed and the question the
    review must answer. Do not silently substitute a different base, branch,
    commit, pull request, or working-tree diff.
-2. In a generated Hub, use the installed setup skill's
+2. In a Kepler control project, use the installed setup skill's
    `scripts/hub_compatibility.py` to check
    `kepler.document.change-review.v1` and, for repository-owned targets,
    `kepler.command.route-plan.v1`. Read `AGENTS.md` and
@@ -23,8 +23,9 @@ separately authorizes a new implementation Plan.
    document is missing, record the compatibility result and use this skill's
    bundled `references/review-method.md`; do not claim the Hub-local workflow
    was read. Review Hub-owned coordination material in place. For a
-   repository-owned target, resolve every owner and dispatch the review before
-   inspecting owner code, then return the receipt without monitoring. If route
+   repository-owned target, resolve every owner. Sol may inspect selected
+   project evidence read-only while preparing the review Plan; Terra dispatches
+   approved review units and returns the receipt without monitoring. If route
    planning is unavailable, use only the checker's manual exact-path handoff
    after normal verification fails.
 3. In an owning repository, read applicable instructions, record branch, SHA,

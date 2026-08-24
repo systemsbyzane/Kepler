@@ -24,6 +24,18 @@ Connected repositories remain in place and workers retain normal Codex
 capability. Planning cannot mutate them; dispatch requires an exact Plan
 revision and exact verified project path.
 
+Ordinary setup begins from the Kepler control project and selects existing
+saved Codex projects from the live project list. ArchitectureMap domains
+replace workload directories, clone roots, and pseudo-projects. A bridge is an
+optional advanced attachment, not a setup or dispatch prerequisite.
+
+The installed Codex task surface supports explicit runtime selection. Sol is
+mechanically requested as `gpt-5.6-sol` for planning and Terra as
+`gpt-5.6-terra` for dispatch. Dispatch receipts record requested and effective
+model and reasoning values; a mismatch is a failed runtime acceptance check.
+Natural language supplies objectives and Plan refinements, while `/kepler`
+commands own setup, persistence, dispatch, review, status, and Doctor actions.
+
 ## Consequences
 
 - Historical lifecycle state is not imported into Kepler v1.
@@ -33,3 +45,5 @@ revision and exact verified project path.
   boundaries.
 - Installed-plugin dispatch and upgrade acceptance require fresh Codex tasks;
   source validators cannot substitute for that evidence.
+- The generated control project contains no default development, charts,
+  patching, research, environments, or compliance workload directories.

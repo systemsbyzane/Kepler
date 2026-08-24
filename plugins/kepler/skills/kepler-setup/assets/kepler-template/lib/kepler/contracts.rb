@@ -14,6 +14,8 @@ module Kepler
 
     def architecture_map!(value)
       document!(value, "ArchitectureMap")
+      metadata = mapping!(value["metadata"], "ArchitectureMap metadata")
+      raise ValidationError, "ArchitectureMap requires explicit confirmation" unless metadata["confirmed"] == true
       workspaces = value["workspaces"]
       raise ValidationError, "ArchitectureMap workspaces must be a non-empty mapping" unless workspaces.is_a?(Hash) && !workspaces.empty?
 
@@ -21,9 +23,10 @@ module Kepler
       workspaces.each do |workspace_id, workspace|
         Support.validate_identifier!(workspace_id, label: "workspace id")
         raise ValidationError, "workspace #{workspace_id} must be a mapping" unless workspace.is_a?(Hash)
-        %w[codex_project repository domains].each do |key|
+        %w[codex_project project_path runtime_project_id domains].each do |key|
           raise ValidationError, "workspace #{workspace_id} is missing #{key}" unless Support.present?(workspace[key])
         end
+        raise ValidationError, "workspace #{workspace_id} project_path must be absolute" unless Pathname.new(workspace["project_path"].to_s).absolute?
         raise ValidationError, "workspace #{workspace_id} domains must be a mapping" unless workspace["domains"].is_a?(Hash)
         workspace["domains"].each do |domain_id, domain|
           Support.validate_identifier!(domain_id, label: "domain id")
@@ -122,7 +125,7 @@ module Kepler
 
     def dispatch_receipt!(value)
       document!(value, "DispatchReceipt")
-      %w[task_id runtime_project_id project_path mode authorization_boundary].each do |key|
+      %w[task_id runtime_project_id project_path mode requested_model effective_model requested_thinking effective_thinking authorization_boundary].each do |key|
         raise ValidationError, "DispatchReceipt is missing #{key}" unless Support.present?(value[key])
       end
       value

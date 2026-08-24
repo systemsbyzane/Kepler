@@ -45,7 +45,8 @@ module Kepler
         "scope" => {
           "workspace" => workspace,
           "codex_project" => workspace_entry["codex_project"],
-          "repository" => workspace_entry["repository"],
+          "runtime_project_id" => workspace_entry["runtime_project_id"],
+          "project_path" => workspace_entry["project_path"],
           "domain" => domain,
           "paths" => Array(unit["paths"])
         },

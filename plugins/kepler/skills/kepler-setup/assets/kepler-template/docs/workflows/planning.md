@@ -1,20 +1,18 @@
 # Planning work
 
-Ask for a plan in natural language. Kepler chooses the least detail that
-still makes the work executable; users do not need to name a skill or select a
-planning mode.
+Start with `/kepler plan`, then describe the objective in natural language.
+Kepler chooses the least detail that still makes the work executable.
 
 ## Planning-only boundary
 
-A planning-only request is read-only. It does not edit files, create or resume
-tasks, or begin implementation. In the Hub, planning uses the registry, route
-plan, bridge metadata, and saved-project state without inspecting owning
-repository code.
+A planning-only request is read-only with respect to selected projects and
+worker dispatch. Sol may inspect relevant selected-project evidence read-only,
+then persist Plan and ContextPack artifacts in the Kepler control project. Sol
+does not edit selected projects, create or resume workers, or implement.
 
-If credible detail requires code-level analysis, name the owning project and
-the missing evidence. Dispatch a read-only owner task only when the user also
-asks Kepler to have that owner investigate or proceed. Return its receipt
-without monitoring.
+Use the confirmed ArchitectureMap, live project identity, relevant repository
+instructions, and scoped memory. Mark unavailable evidence explicitly; do not
+invent it or dispatch merely to avoid read-only inspection.
 
 ## Right-sized output
 

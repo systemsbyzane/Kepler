@@ -1,8 +1,7 @@
 # Platform and environments
 
-Ask about infrastructure, cloud, clusters, platform services, or environments
-in natural language. Users do not need to name a skill or select a platform
-mode.
+Use `/kepler plan` for infrastructure, cloud, clusters, platform services, or
+environments, then describe the objective in natural language.
 
 ## Source and runtime split
 

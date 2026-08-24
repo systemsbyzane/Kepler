@@ -2,7 +2,7 @@
 
 This runbook is mandatory for advanced bridge configuration in an existing
 Kepler: mode changes, migration, drift repair, or manually declared bulk
-sets. Execute it from the generated Hub. Initial discovery and ordinary
+sets. Execute it from the Kepler control project. Initial project selection and ordinary
 repository connection belong to `kepler-setup`. Bridge work configures
 checkouts, bridges, and saved projects; it does not create implementation
 tasks.

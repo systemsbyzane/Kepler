@@ -114,8 +114,8 @@ def main() -> int:
         failures.append("SKILL.md must mandate references/setup-runbook.md")
 
     setup_triggers = (
-        "set up kepler",
-        "connect repositories",
+        "/kepler setup",
+        "saved codex project",
     )
     setup_trigger_paths = (
         ROOT / "SKILL.md",
@@ -225,10 +225,10 @@ def main() -> int:
     )
     for anchor in (
         "lead kepler skill",
-        "owning workload",
         "new evidence crosses domains",
         "before domain-specific mutation",
         "do not preload",
+        "not an exclusive boundary",
     ):
         if anchor not in composition_text:
             failures.append(f"skill composition contract missing anchor: {anchor}")

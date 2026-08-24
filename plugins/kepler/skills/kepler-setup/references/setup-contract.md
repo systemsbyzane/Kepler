@@ -1,48 +1,29 @@
-# Setup contract
+# Project-first setup contract
 
-The generated Hub is a coordination workspace, not a source monorepo.
+The generated control project stores coordination state, not source code.
 
-- Keep stable topology in `kepler.yaml`.
-- Keep generated task, report, bridge, parity, and provider state ignored.
-- Keep real program evidence and outputs outside tracked coordination-layer content.
-- Use synthetic fixtures only in tests.
-- Configure providers without credentials: GitHub, GitLab, Bitbucket, generic
-  Git, existing local checkouts, and remote validation contexts.
-- Resolve and record repository ownership and the verified default branch
-  before cloning. Hosted provider hosts may be configured; generic Git requires
-  an explicit owner and canonical URL.
-- For an attached checkout, prefer local `origin/HEAD`. If it is unavailable,
-  preserve usability by recording the checked-out branch with
-  `default_branch_verified: false` and report the pending provider-metadata
-  check; never present the fallback as verified.
-- Discover only under a user-authorized repository root. Existing checkouts
-  attach in place by default; setup never moves them into the Hub.
-- Store attached absolute paths only in ignored local repository state. Keep
-  tracked declarations portable with `placement: attached` and no
-  `local_path`.
-- Default initial setup to a non-destructive `reference` bridge. The setup
-  request authorizes its ignored `AGENTS.override.md` and Git-local exclude
-  entry, but never tracked repository-policy changes.
-- Automations remain disabled until explicit enablement.
-- Register each owning repository or program folder as a separate Codex project.
-- Keep its stable logical project key separate from Codex's opaque runtime
-  project ID.
-- Validate saved project registration by exact normalized real path against a
-  refreshed live project list, reject display-name-only matches, and record the
-  opaque runtime ID only after that match.
+- Start in a normal `Kepler-<company>` saved Codex project.
+- Select only entries returned by the current live project list.
+- Keep the logical Kepler key separate from the opaque runtime project ID.
+- Require an exact normalized path match; a display-name match is insufficient.
+- Never scan a repository root, create clone roots, or generate development,
+  charts, patching, research, environments, compliance, Mission, or Operation
+  topology.
+- Never clone, move, import, open, or edit a selected project during setup.
+- Represent ownership with a user-confirmed ArchitectureMap. Domains and paths
+  are initial, non-exclusive context and may be refined by later Plan revisions.
+- Keep bridges optional. A missing bridge is valid. A configured bridge is
+  strict and must fail closed on missing records, drift, or integrity errors.
+- Keep automations disabled until explicitly enabled.
 
-The generated workspace must pass Ruby tests, coordination-layer YAML/JSON parsing,
-Doctor, and the de-branding scanner before use. Coordination-layer parsing and
-de-branding exclude configured workload repositories, program payloads, and
-ignored local runtime state. Doctor remains responsible for repository state,
-bridges, tasks, handoffs, and compliance artifact integrity.
+The project catalog comes from `codex_app.list_projects` schema version 2.
+Persist exact IDs and real paths only after `setup apply --confirm`. A refined
+proposal may be supplied with `--architecture-map FILE`; its workspace set,
+opaque IDs, and exact paths must agree with the selected projects. Setup may
+write the selected-project registry and ArchitectureMap inside the control
+project; it may not write selected projects or create tasks.
 
-The repo-managed bootstrap is preview-first and credential-free. It may
-generate an absent or empty target or validate a recognized generated Hub as a
-no-op. Stable topology in `kepler.yaml` and repository declarations in
-`hub/repositories.yaml` are configuration surfaces and may differ from the
-template when they remain valid. Other generated managed files must remain
-recognizable; partial, unmanaged, path-mismatched, or drifting non-empty targets
-are rejected. Bootstrap has no force, merge, repair, or in-place upgrade mode.
-Plugin installation, project registration, and runtime capability verification
-remain separate explicit actions.
+The generated control project must pass Ruby tests, JSON/YAML/schema parsing,
+Doctor, de-branding, and setup-link validation. Installed discovery, model
+selection, task dispatch, create/resume behavior, and WorkerResult flow remain
+fresh-task runtime acceptance checks.

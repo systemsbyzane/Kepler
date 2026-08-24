@@ -1,7 +1,7 @@
 # CI/CD and delivery
 
-Ask about checks, pipelines, builds, releases, or delivery in natural language.
-Users do not need to name a skill or select a workflow mode.
+Use `/kepler plan` for checks, pipelines, builds, releases, or delivery work.
+Describe the objective in natural language after the command.
 
 ## Exact evidence
 
@@ -9,9 +9,9 @@ Identify the repository, provider, pipeline, run, candidate SHA, and delivery
 environment. Correlate current provider evidence with the workflow definition
 at that exact revision; the latest run and current checkout may differ.
 
-From the Hub, use provider metadata only to resolve ownership, then dispatch
-repository-owned diagnosis or implementation before inspecting pipeline
-source. Return the receipt without monitoring.
+Sol may inspect the selected project's pipeline source and provider evidence
+read-only while preparing the Plan. Terra dispatches an approved unit and
+returns the receipt without monitoring.
 
 ## Adaptive action
 
