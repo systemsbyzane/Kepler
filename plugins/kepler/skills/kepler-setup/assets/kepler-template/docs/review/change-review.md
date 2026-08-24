@@ -1,14 +1,16 @@
 # Change review
 
-Ask for a review in natural language. Kepler infers the required depth from
-the exact target, trust boundaries, compatibility risk, and blast radius.
+Start with `/kepler review`, then identify the target in natural language.
+Kepler infers the required depth from trust boundaries, compatibility risk,
+and blast radius.
 
 ## Ownership and target
 
 Review code, configuration, manifests, artifacts, and repository evidence in
 the owning project. Review Hub-owned coordination plans or workflows in place.
-For a repository-owned target, resolve the owner and dispatch the review before
-inspecting owner code, then return the receipt without monitoring.
+Sol may inspect repository-owned evidence read-only while preparing the review
+Plan. Terra dispatches any approved worker unit and returns the receipt without
+monitoring.
 
 Record the exact pull request, base and candidate SHA, branch comparison,
 working tree, plan, or architecture under review. Do not silently substitute a

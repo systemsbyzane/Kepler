@@ -20,13 +20,13 @@ Mac owns:
 - pod health, logs, routes, and smoke checks
 - validation evidence tied to the cluster
 
-## Required Codex Projects
+## Required saved Codex projects
 
-Add these local Mac projects:
+Select the existing local projects that own the source and deployment manifests.
 
-- `<hub-root>/development/backend`
-- `<hub-root>/development/frontend`
-- `<hub-root>/charts`
+- `<existing-backend-project>`
+- `<existing-frontend-project>`
+- `<existing-charts-project>`
 
 Add these remote `remote-validation` projects:
 
@@ -35,14 +35,15 @@ Add these remote `remote-validation` projects:
 - `<remote-checkout>/charts`
 - `<remote-checkout>`
 
-The Hub verifies these projects with `list_projects`. If an existing checkout
-is missing, it registers the project automatically and refreshes the list before
-creating the task. Use SSH-only validation as a fallback only when remote
-project registration or task launch actually fails.
+`/kepler setup` verifies selected projects using the live list, opaque runtime
+IDs, and exact normalized paths. It does not clone, open, or register them. If
+a required project is missing, add it through the supported Codex action,
+refresh the list, and select the exact match. Use SSH-only validation as a
+fallback only when remote task launch actually fails.
 
 ## Default Flow
 
-1. Start in the hub.
+1. Start in the Kepler control project with `/kepler plan`.
 2. Run `bash scripts/development-vm-preflight.sh`.
 3. Confirm the local branch/SHA for backend, frontend, and charts.
 4. If a Local repository is dirty, choose one:
@@ -91,5 +92,4 @@ the branch, apply a patch bundle, or state that this is a scratch remote-only te
 
 Use `docs/templates/development-vm-validation-handoff.md` when creating remote
 remote build and validation threads from the hub.
-
 

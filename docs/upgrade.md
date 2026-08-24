@@ -1,6 +1,7 @@
 # Upgrade
 
-Kepler v1.0.0 is the first supported Kepler data format. There is no in-place
+Kepler v1.0.0 is the first supported Kepler data format. Kepler v1.1.0 changes
+new control projects to project-first setup. There is no in-place
 control-project schema migration from the pre-Mission Flightdeck baseline:
 that source has task/workflow state rather than Kepler's ArchitectureMap,
 Plan, ContextPack, WorkerResult, and memory contracts. Treating those as

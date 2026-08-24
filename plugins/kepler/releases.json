@@ -211,6 +211,27 @@
         "Install Kepler as a separate plugin identity and start a fresh Codex task.",
         "Migrate supported declarations, confirm an ArchitectureMap, and run Doctor; connected repositories are not rewritten."
       ]
+    },
+    {
+      "version": "1.1.0",
+      "date": "2026-08-23",
+      "summary": "Project-first Kepler v1 finish-line workflow.",
+      "changes": [
+        {"category": "changed", "text": "Replaced repository-root discovery and generated workload topology with exact selection of existing saved Codex projects and a confirmed ArchitectureMap."},
+        {"category": "changed", "text": "Made explicit /kepler commands primary, allowed Sol read-only planning inspection, bound dispatch requests to Terra, and preserved ordinary directly accessible workers."},
+        {"category": "changed", "text": "Demoted repository bridges to optional advanced policy and made absent bridges valid while configured bridge drift still fails closed."},
+        {"category": "added", "text": "Added literal Git and local marketplace installation guidance plus installed-runtime evidence contracts for model identity, exact project routing, WorkerResults, and upgrade preservation."},
+        {"category": "removed", "text": "Removed default development, charts, patching, research, environments, and compliance pseudo-workload directories and their legacy handoff helper."}
+      ],
+      "breaking_changes": [
+        "New control projects use project-first setup and no longer generate workload directories or install bridges during setup.",
+        "The old repository-root setup plan/connect command flow is not part of the default v1.1 interface."
+      ],
+      "migration": [
+        "Preserve an existing control project as rollback evidence; install Kepler 1.1.0 and start a fresh task.",
+        "Create a new control project, select existing saved Codex projects by opaque runtime ID and exact path, confirm the ArchitectureMap, and run Doctor.",
+        "Do not copy workload lifecycle state, Missions, Operations, transcripts, or Kepler-legacy content into the new control project."
+      ]
     }
   ]
 }

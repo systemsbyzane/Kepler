@@ -34,6 +34,7 @@ module Kepler
         "compliance_pairs" => compliance.fetch("pairs").length,
         "bridges" => BridgeStore.new(@config).records.length,
         "repository_declarations" => declarations.length,
+        "selected_projects" => @config.project_verifications.length,
         "architecture_map" => coordination["architecture_map"],
         "plans" => coordination["plans"]
       }
@@ -70,7 +71,20 @@ module Kepler
         )
       end
       @config.repository_declarations
-      @config.project_verifications
+      projects = @config.project_verifications
+      projects.each do |key, project|
+        unless File.exist?(project["path"])
+          issues << issue("error", "project.path_missing", key, "selected project exact path is unavailable")
+        end
+      end
+      planner = @config.routing.fetch("planner_runtime", {})
+      dispatcher = @config.routing.fetch("dispatcher_runtime", {})
+      unless planner["model"] == "gpt-5.6-sol"
+        issues << issue("error", "runtime.sol_model", "routing.planner_runtime", "Sol must request gpt-5.6-sol")
+      end
+      unless dispatcher["model"] == "gpt-5.6-terra"
+        issues << issue("error", "runtime.terra_model", "routing.dispatcher_runtime", "Terra must request gpt-5.6-terra")
+      end
       issues
     rescue ValidationError => e
       issues << issue("error", "registry.invalid", "hub/state/repositories.yaml", e.message)
@@ -140,8 +154,17 @@ module Kepler
       issues = []
       architecture = false
       if File.file?(@config.architecture_map_path)
-        ArchitectureMapStore.new(@config).load
+        map = ArchitectureMapStore.new(@config).load
         architecture = true
+        map.fetch("workspaces").each do |key, workspace|
+          project = @config.project_verifications[workspace.fetch("codex_project")]
+          if project.nil? || project["runtime_project_id"] != workspace["runtime_project_id"] ||
+             File.realpath(project["path"]) != File.realpath(workspace["project_path"])
+            issues << issue("error", "architecture.project_conflict", key, "ArchitectureMap project identity conflicts with selected-project state")
+          end
+        rescue Errno::ENOENT, Errno::ELOOP
+          issues << issue("error", "architecture.project_conflict", key, "ArchitectureMap project path cannot be resolved")
+        end
       else
         issues << issue("warning", "architecture_map.missing", "hub/architecture-map.yaml", "run /kepler setup and confirm the proposed ArchitectureMap")
       end

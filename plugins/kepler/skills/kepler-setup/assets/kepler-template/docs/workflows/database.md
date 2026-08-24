@@ -3,7 +3,7 @@
 Use this workflow whenever the request concerns a database, DB, data store,
 schema, table, query, index, transaction, ORM, connection pool, migration,
 backfill, replication, backup, restore, retention, performance, incident, or
-operational change. Users do not need to name a skill.
+operational change. Start coordinated work with `/kepler plan`.
 
 ## Adaptive Workflow
 
@@ -12,10 +12,10 @@ operational change. Users do not need to name a skill.
 2. Ask only for context that changes the safe answer: engine and version,
    topology, environment, workload, sensitivity, consumers, availability, RPO,
    and RTO.
-3. Resolve the owning application repository, chart, delivery pipeline,
-   platform service, environment, or program before inspecting owner state.
-4. Dispatch owner investigation or implementation and return the receipt
-   without monitoring.
+3. Resolve the selected owning project and ArchitectureMap domain. Sol may
+   inspect relevant project evidence read-only while planning.
+4. Terra dispatches an approved unit and returns the receipt without
+   monitoring.
 5. Keep source intent, generated plans, applied migrations, primary and replica
    state, backups, and observed runtime evidence distinct.
 6. Require separate authorization for each live data or environment action.

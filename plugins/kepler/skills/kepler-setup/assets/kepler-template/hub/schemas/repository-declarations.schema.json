@@ -29,7 +29,6 @@
       "additionalProperties": false,
       "required": [
         "id",
-        "workload",
         "provider",
         "locator",
         "owner",
@@ -41,7 +40,7 @@
       "properties": {
         "id": {"$ref": "#/$defs/id"},
         "placement": {"enum": ["managed", "attached"]},
-        "workload": {"$ref": "#/$defs/id"},
+        "workload": {"const": "shared"},
         "provider": {
           "enum": ["github", "gitlab", "bitbucket", "git", "existing-local"]
         },

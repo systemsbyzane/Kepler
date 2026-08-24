@@ -163,7 +163,7 @@ module Kepler
       handoffs = File.join(@root, "handoffs")
       return [] unless Dir.exist?(handoffs)
 
-      Dir.glob(File.join(handoffs, "**", "*")).sort.filter_map do |path|
+      Dir.glob(File.join(handoffs, "**", "*")).sort.map do |path|
         next unless File.file?(path) && TEXT_EXTENSIONS.include?(File.extname(path).downcase)
 
         matches = []
@@ -188,7 +188,7 @@ module Kepler
           "scope" => Support.relative_path(@root, path),
           "message" => e.message
         }
-      end
+      end.compact
     end
   end
 
@@ -302,10 +302,10 @@ module Kepler
         text = File.file?(target) ? File.read(target, encoding: "UTF-8") : ""
         text.split(marker, 2)[1]
       when "materialized"
-        Array(record["artifacts"]).filter_map do |artifact|
+        Array(record["artifacts"]).map do |artifact|
           path = Support.contained_path(root, artifact.fetch("path"), label: "bridge artifact")
           File.read(path, encoding: "UTF-8") if File.file?(path)
-        end.join("\n")
+        end.compact.join("\n")
       end
     end
 
@@ -321,7 +321,7 @@ module Kepler
     end
 
     def run
-      Dir.glob(File.join(@root, "hub", "automations", "*.yaml")).sort.filter_map do |path|
+      Dir.glob(File.join(@root, "hub", "automations", "*.yaml")).sort.map do |path|
         value = Support.load_data(path)
         next if value["enabled"] == false && value.dig("activation", "policy") == "explicit_user_enablement"
 
@@ -338,7 +338,7 @@ module Kepler
           "scope" => Support.relative_path(@root, path),
           "message" => e.message
         }
-      end
+      end.compact
     end
   end
 end

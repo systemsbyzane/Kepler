@@ -1,6 +1,6 @@
 ---
 name: kepler-repo-bridge
-description: Inspect, change, migrate, or repair repository instruction bridges and exact-path saved-project identities for an existing Kepler. Use for reference, materialized, or repo-native mode changes, bridge drift, unsafe overrides, advanced bulk bridge work, or owning-repository onboarding. Initial one-prompt Kepler setup belongs to kepler-setup.
+description: Inspect, change, migrate, or repair optional repository instruction bridges and exact-path saved-project identities for an existing Kepler control project. Use for reference, materialized, or repo-native mode changes, bridge drift, unsafe overrides, or advanced bulk bridge work. Initial project-first setup belongs to kepler-setup.
 ---
 
 # Kepler Repo Bridge

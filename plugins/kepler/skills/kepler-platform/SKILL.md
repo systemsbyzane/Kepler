@@ -14,9 +14,10 @@ an unnecessary infrastructure checklist.
 1. Identify the owning layer: infrastructure source, chart or manifest,
    application contract, platform service, environment configuration, or live
    runtime.
-2. In a generated Hub, read `AGENTS.md`,
-   `docs/workflows/platform.md`, and routing policy. Dispatch repository-owned
-   source analysis before inspecting that source.
+2. In a Kepler control project, read `AGENTS.md`,
+   `docs/workflows/platform.md`, and the ArchitectureMap. Sol may inspect
+   selected-project source read-only while planning; Terra dispatches approved
+   implementation or runtime-validation units.
 3. Perform source edits in the owning repository. Use `$kepler-charts` for
    Helm or Kubernetes manifest mechanics.
 4. Perform durable live inspection or validation in the matching environment

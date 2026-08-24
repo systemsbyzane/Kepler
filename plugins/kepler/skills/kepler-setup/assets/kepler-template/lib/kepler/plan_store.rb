@@ -45,6 +45,7 @@ module Kepler
       {
         "plan_id" => plan.dig("metadata", "id"),
         "revision" => plan.dig("metadata", "revision"),
+        "change_summary" => Array(plan.dig("metadata", "change_summary")),
         "state" => plan.dig("status", "state"),
         "units" => states,
         "unit_status" => plan["units"].map { |unit| unit_summary(unit) },
@@ -66,7 +67,6 @@ module Kepler
           "plan_revision" => revision.to_i,
           "unit_id" => unit["id"],
           "codex_project" => pack.dig("scope", "codex_project"),
-          "repository" => pack.dig("scope", "repository"),
           "paths" => pack.dig("scope", "paths"),
           "runtime_project_id" => target["runtime_project_id"],
           "project_path" => target["project_path"],
@@ -195,14 +195,7 @@ module Kepler
       architecture = ArchitectureMapStore.new(@config).load
       workspace = architecture.fetch("workspaces").fetch(unit["workspace"])
       logical_key = workspace.fetch("codex_project")
-      repository = @config.repository(workspace.fetch("repository"))
-      project = @config.codex_project(logical_key)
-      expected_path = if repository
-                        @config.repository_path(repository)
-                      elsif project && Support.present?(project["path"])
-                        File.expand_path(project["path"])
-                      end
-      raise ValidationError, "dispatch target path is unresolved for #{unit['workspace']}" unless expected_path
+      expected_path = workspace.fetch("project_path")
       verification = @config.project_verification(
         logical_key: logical_key,
         expected_path: expected_path
@@ -210,6 +203,9 @@ module Kepler
       unless verification["status"] == "verified"
         raise ValidationError,
               "dispatch target #{logical_key} is not verified by exact path: #{verification['status']}"
+      end
+      unless verification["runtime_project_id"] == workspace.fetch("runtime_project_id")
+        raise ValidationError, "dispatch target runtime ID conflicts with the confirmed ArchitectureMap"
       end
       {
         "logical_project_key" => logical_key,
@@ -249,7 +245,11 @@ module Kepler
           "task_url" => receipt["task_url"],
           "runtime_project_id" => receipt["runtime_project_id"],
           "project_path" => receipt["project_path"],
-          "mode" => receipt["mode"]
+          "mode" => receipt["mode"],
+          "requested_model" => receipt["requested_model"],
+          "effective_model" => receipt["effective_model"],
+          "requested_thinking" => receipt["requested_thinking"],
+          "effective_thinking" => receipt["effective_thinking"]
         }.compact,
         "blockers" => result ? Array(result["blockers"]) : [],
         "validation" => result ? Array(result["validation"]) : [],

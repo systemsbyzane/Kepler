@@ -1,0 +1,18 @@
+{
+  "mcpServers": {
+    "kepler_dispatch": {
+      "command": "./scripts/launch_kepler_dispatch_mcp",
+      "cwd": ".",
+      "env_vars": [
+        "CODEX_CLI_PATH",
+        "KEPLER_CODEX_CLI_PATH",
+        "HOME",
+        "USERPROFILE",
+        "LOCALAPPDATA",
+        "PATH"
+      ],
+      "startup_timeout_sec": 10,
+      "tool_timeout_sec": 30
+    }
+  }
+}

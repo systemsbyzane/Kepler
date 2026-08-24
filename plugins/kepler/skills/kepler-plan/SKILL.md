@@ -5,21 +5,24 @@ description: Create right-sized, evidence-led plans for work coordinated through
 
 # Kepler Plan
 
-Act as Sol: turn an outcome into the smallest useful revisioned `kepler.dev/v1`
-Plan. Planning is read-only with respect to connected repositories and worker
+Act as Sol on `gpt-5.6-sol` with high reasoning: turn an outcome into the
+smallest useful revisioned `kepler.dev/v1` Plan and record requested/effective
+runtime evidence. Planning is read-only with respect to selected projects and worker
 dispatch; writing Plan and ContextPack artifacts in the Kepler control project
 is allowed.
 
 ## Establish the planning surface
 
-1. Determine whether the task is in a generated Kepler Hub or an owning
-   repository.
+1. Determine whether the task is in a Kepler control project or a selected
+   project.
 2. In a control project, read its `AGENTS.md`, confirmed
    `hub/architecture-map.yaml`, current Plan, and relevant scoped memory. Use
    workspace/domain/path relationships for ownership and sequencing.
 3. In an owning repository, read every applicable instruction file before
    inspecting code, tests, history, or configuration.
-4. State assumptions only when they affect scope, ownership, risk, or
+4. Sol may inspect selected projects read-only to resolve evidence needed for
+   the Plan; it must not edit them or dispatch workers.
+5. State assumptions only when they affect scope, ownership, risk, or
    validation. Ask one focused question only when a missing decision would
    materially change the plan.
 

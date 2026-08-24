@@ -1,13 +1,70 @@
-# Install
+# Install Kepler 1.1.0
+
+Kepler requires a Codex build with plugin marketplaces, saved-project listing,
+task create/resume, per-task model selection, and effective-model readback. The
+release acceptance baseline is Codex CLI `0.149.0`.
+
+## Stable Git marketplace
+
+After the `v1.1.0` release tag is published, run:
+
+```sh
+codex plugin marketplace add systemsbyzane/Kepler --ref v1.1.0 --json
+codex plugin list --marketplace kepler-team --available --json
+codex plugin add kepler@kepler-team --json
+codex plugin list --marketplace kepler-team --json
+```
+
+The structured results must identify marketplace `kepler-team`, plugin
+`kepler`, version `1.1.0`, and an enabled installed record. A missing or
+different identity is a failure, not a compatible alias.
 
 ## Local development
 
-1. Clone this repository.
-2. Add its `.agents/plugins/marketplace.json` as a local marketplace using the plugin-management surface supported by the installed Codex version.
-3. Install `kepler` from the `kepler-team` marketplace.
-4. Refresh Codex and start a new task so the plugin skills are loaded.
-5. Confirm that `/kepler setup` or the `kepler` skill is available.
+Use the repository's absolute path:
 
-The repository intentionally does not publish unverified literal CLI commands. Codex plugin installation surfaces can change; use the current Codex plugin UI or documented local-marketplace command shown by the installed version.
+```sh
+codex plugin marketplace add /absolute/path/to/Kepler --json
+codex plugin list --marketplace kepler-team --available --json
+codex plugin add kepler@kepler-team --json
+codex plugin list --marketplace kepler-team --json
+```
 
-Kepler is not yet claimed as published. When a directory release exists, this guide must name its exact entry, version requirement, expected success signal, and verification procedure before release.
+Use a clean `CODEX_HOME` for release acceptance. Start a fresh Codex task after
+installation so skill discovery uses the installed snapshot, then open a
+normal `Kepler-<company>` project and run `/kepler setup`.
+
+## Upgrade, reinstall, and uninstall
+
+Refresh a Git marketplace and reinstall the same plugin identity:
+
+```sh
+codex plugin marketplace upgrade kepler-team --json
+codex plugin add kepler@kepler-team --json
+```
+
+Uninstall only when explicitly intended:
+
+```sh
+codex plugin remove kepler@kepler-team --json
+codex plugin marketplace remove kepler-team --json
+```
+
+See [upgrade](upgrade.md) for preservation checks. Never hand-edit the plugin
+cache.
+
+## Recovery
+
+- Marketplace-name conflict: inspect `codex plugin list --available --json`;
+  remove the conflicting marketplace only after confirming its exact identity,
+  then add Kepler again.
+- Stale Git snapshot: run the marketplace upgrade command and reinstall.
+- Plugin unavailable: verify the marketplace is `kepler-team`, the requested
+  ref exists, and the available list contains `kepler` version `1.1.0`.
+- Fresh task does not expose Kepler: confirm the installed enabled record,
+  fully restart Codex, and create another fresh task.
+
+Installing Kepler does not create or scan a repositories root, clone or move a
+repository, register a project, generate workload directories, install a
+repository bridge, edit selected-project files, deploy, publish, or contact an
+external service beyond the requested marketplace fetch.

@@ -12,8 +12,9 @@ import subprocess
 COMMANDS = ("python3", "ruby", "git")
 RUNTIME_REQUIREMENTS = (
     "live_project_list",
-    "native_project_registration_or_supported_open_folder",
-    "task_search_and_create",
+    "task_search_create_and_resume",
+    "task_model_selection",
+    "effective_task_model_readback",
     "workspace_dependency_loader",
     "documents_capability",
     "pdf_capability",

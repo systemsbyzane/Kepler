@@ -297,15 +297,15 @@ module Kepler
 
       value = Support.stringify(item)
       value["placement"] ||= "managed"
+      value["workload"] ||= "shared"
       required = %w[
-        id workload provider locator owner default_branch
+        id provider locator owner default_branch
         default_branch_verified bridge codex_project
       ]
       missing = required.reject { |key| Support.present?(value[key]) || value[key] == false }
       raise ConfigurationError, "repository declaration missing: #{missing.join(', ')}" unless missing.empty?
 
       Support.validate_identifier!(value["id"], label: "repository declaration ID")
-      raise ConfigurationError, "unknown declared workload: #{value['workload']}" unless workload(value["workload"])
       raise ConfigurationError, "unknown declared provider: #{value['provider']}" unless provider(value["provider"])
       unless %w[managed attached].include?(value["placement"])
         raise ConfigurationError, "declared repository placement must be managed or attached"

@@ -10,7 +10,7 @@
     "metadata": {"type": "object", "required": ["id", "estimated_tokens", "token_budget"]},
     "parent_plan": {"type": "object", "required": ["id", "revision"]},
     "objective": {"type": "string", "minLength": 1},
-    "scope": {"type": "object", "required": ["workspace", "codex_project", "repository", "domain", "paths"]},
+    "scope": {"type": "object", "required": ["workspace", "codex_project", "runtime_project_id", "project_path", "domain", "paths"]},
     "worker_policy": {"type": "object", "required": ["initial_context_not_boundary", "return_worker_result"], "properties": {"initial_context_not_boundary": {"const": true}, "return_worker_result": {"const": true}}}
   }
 }

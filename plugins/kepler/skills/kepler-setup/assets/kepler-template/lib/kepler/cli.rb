@@ -35,6 +35,7 @@ module Kepler
       when "architecture" then architecture(config, arguments)
       when "plan" then plan(config, arguments)
       when "dispatch" then dispatch(config, arguments)
+      when "review" then review(config, arguments)
       when "result" then result(config, arguments)
       when "memory" then memory(config, arguments)
       else raise UsageError, "unknown command: #{command}"
@@ -87,54 +88,37 @@ module Kepler
 
     def setup(config, argv)
       subcommand = argv.shift
-      options = { failure_policy: "continue", json: false }
+      options = { project_ids: [], confirm: false, json: false }
       OptionParser.new do |parser|
-        parser.on("--repositories-root PATH") { |value| options[:repositories_root] = value }
-        parser.on("--failure-policy POLICY") { |value| options[:failure_policy] = value }
+        parser.on("--project-catalog FILE") { |value| options[:project_catalog] = value }
+        parser.on("--project-id ID") { |value| options[:project_ids] << value }
+        parser.on("--architecture-map FILE") { |value| options[:architecture_map] = value }
+        parser.on("--confirm") { options[:confirm] = true }
         parser.on("--json") { options[:json] = true }
       end.parse!(argv)
       empty!(argv)
-      raise UsageError, "--repositories-root is required" unless options[:repositories_root]
+      raise UsageError, "--project-catalog is required" unless options[:project_catalog]
 
       json_output = options.delete(:json)
       store = SetupStore.new(config)
       result = case subcommand
-               when "plan" then store.plan(**options)
-               when "connect" then store.connect(**options)
-               else raise UsageError, "setup requires plan or connect"
+               when "plan"
+                 options.delete(:confirm)
+                 options.delete(:architecture_map)
+                 store.plan(**options)
+               when "apply" then store.apply(**options)
+               else raise UsageError, "setup requires plan or apply"
                end
       if json_output
         json(result)
-      elsif subcommand == "plan"
-        @out.puts("Repository connection preview")
-        @out.puts("Root: #{result['repositories_root']}")
-        @out.puts(
-          "Discovered: #{result.dig('summary', 'discovered')}; " \
-          "ready: #{result.dig('summary', 'ready')}; " \
-          "already connected: #{result.dig('summary', 'noop')}; " \
-          "blocked: #{result.dig('summary', 'blocked')}"
-        )
-        result["repositories"].each do |item|
-          @out.puts("- #{item['repository_id']}: #{item['status']} (#{item['path']})")
-          Array(item["warnings"]).each { |message| @out.puts("  note: #{message}") }
-          item.fetch("blockers").each { |message| @out.puts("  blocker: #{message}") }
-        end
-        @out.puts("No files, repositories, projects, or Git state were changed.")
       else
-        @out.puts("Repository connection: #{result['status']}")
-        @out.puts(
-          "Connected: #{result.dig('summary', 'connected')}; " \
-          "blocked: #{result.dig('summary', 'blocked')}; " \
-          "Codex projects pending: #{result.dig('summary', 'project_pending')}"
-        )
-        result["repositories"].each do |item|
-          @out.puts("- #{item['repository_id']}: #{item['connection_status']} (#{item['path']})")
-          Array(item["warnings"]).each { |message| @out.puts("  note: #{message}") }
-          item.fetch("blockers").each { |message| @out.puts("  blocker: #{message}") }
+        @out.puts(subcommand == "plan" ? "Saved project selection preview" : "Saved projects configured")
+        result.fetch("projects").each do |item|
+          @out.puts("- #{item['logical_key']}: #{item['runtime_project_id']} (#{item['path']})")
         end
         @out.puts(result["next"])
       end
-      subcommand == "connect" && !result["ok"] ? 1 : 0
+      0
     end
 
     def route(config, argv)
@@ -142,14 +126,13 @@ module Kepler
 
       options = { json: false }
       OptionParser.new do |parser|
-        parser.on("--workload NAME") { |value| options[:workload_name] = value }
+        parser.on("--workspace NAME") { |value| options[:workspace] = value }
+        parser.on("--domain NAME") { |value| options[:domain] = value }
         parser.on("--work-type TYPE") { |value| options[:work_type] = value }
-        parser.on("--repo-id ID") { |value| options[:repository_id] = value }
-        parser.on("--project-key KEY") { |value| options[:project_key] = value }
         parser.on("--json") { options[:json] = true }
       end.parse!(argv)
       empty!(argv)
-      raise UsageError, "--workload and --work-type are required" unless options[:workload_name] && options[:work_type]
+      raise UsageError, "--workspace, --domain, and --work-type are required" unless options[:workspace] && options[:domain] && options[:work_type]
 
       json_output = options.delete(:json)
       result = RoutePlanner.new(config).plan(**options)
@@ -157,8 +140,8 @@ module Kepler
         json(result)
       else
         @out.puts("Read-only routing plan")
-        @out.puts("Project: #{result['project_name']} [#{result['project_key']}] (#{result['project_path']})")
-        @out.puts("Runtime project ID: #{result['runtime_project_id'] || 'pending exact-path verification'}")
+        @out.puts("Project: #{result['logical_project_key']} (#{result['project_path']})")
+        @out.puts("Runtime project ID: #{result['runtime_project_id']}")
         @out.puts("Mode: #{result['mode']}")
         @out.puts("Dispatch required: #{result['dispatch_required'] ? 'yes' : 'no'}")
         result["steps"].each_with_index { |step, index| @out.puts("#{index + 1}. #{step}") }
@@ -364,6 +347,21 @@ module Kepler
       0
     end
 
+    def review(config, argv)
+      id = argv.shift
+      empty!(argv)
+      store = PlanStore.new(config)
+      plan = store.load(id)
+      result = store.summary(plan).merge(
+        "review_only" => true,
+        "fixes_authorized" => false,
+        "transcript_sync" => false,
+        "evidence" => plan["units"].map { |unit| unit["worker_result"] }.compact
+      )
+      json(result)
+      0
+    end
+
     def memory(config, argv)
       subcommand = argv.shift
       store = MemoryStore.new(config)
@@ -398,9 +396,9 @@ module Kepler
           bin/kepler help
           bin/kepler doctor [--json] [--strict]
           bin/kepler status [--json] [--write]
-          bin/kepler setup plan --repositories-root PATH [--failure-policy stop|continue] [--json]
-          bin/kepler setup connect --repositories-root PATH [--failure-policy stop|continue] [--json]
-          bin/kepler route plan --workload NAME --work-type TYPE [--repo-id ID] [--project-key KEY] [--json]
+          bin/kepler setup plan --project-catalog FILE --project-id ID [--project-id ID ...] [--json]
+          bin/kepler setup apply --project-catalog FILE --project-id ID [--project-id ID ...] --confirm [--json]
+          bin/kepler route plan --workspace NAME --domain NAME --work-type TYPE [--json]
           bin/kepler repo plan --workload NAME --provider NAME --repo LOCATOR [--name NAME] [--owner OWNER] [--default-branch BRANCH] [--json]
           bin/kepler repo onboard --workload NAME --provider NAME --repo LOCATOR --id ID [--name NAME] [--url URL] [--owner OWNER] [--default-branch BRANCH] [--bridge-mode MODE] [--acknowledge-repo-native]
           bin/kepler bridge plan --repo-id ID [--mode MODE] [--profile PROFILE] [--json]
@@ -415,11 +413,12 @@ module Kepler
           bin/kepler dispatch prepare PLAN_ID --revision N [--unit ID] [--budget N]
           bin/kepler dispatch record PLAN_ID --revision N --unit ID --receipt FILE
           bin/kepler result ingest FILE
+          bin/kepler review [PLAN_ID]
           bin/kepler memory ingest FILE
           bin/kepler memory query --text TEXT [--workspace ID] [--domain ID] [--limit N]
 
-        doctor, status, setup plan, route plan, repo plan, and bridge plan are read-only.
-        status --write, setup connect, repo onboard, bridge install, architecture
+        doctor, status, setup plan, route plan, repo plan, bridge plan, and review are read-only.
+        status --write, setup apply, repo onboard, bridge install, architecture
         confirm, plan apply, dispatch record, result ingest, and memory ingest
         have explicit state-changing names and write only their documented scope.
       HELP
@@ -432,7 +431,7 @@ module Kepler
       result.fetch("issues").each do |item|
         @out.puts("#{item['severity'].upcase} [#{item['code']}] #{item['scope']}: #{item['message']}")
       end
-      @out.puts("Checked #{summary['repositories']} repositories, #{summary['plans']} Plans, #{summary['bridges']} bridges, and #{summary['compliance_pairs']} compliance sidecar pairs.")
+      @out.puts("Checked #{summary['selected_projects']} selected projects, #{summary['plans']} Plans, and #{summary['bridges']} optional bridges.")
       @out.puts("Repository ahead/behind values use local tracking refs; Doctor does not fetch.")
     end
 
@@ -446,6 +445,7 @@ module Kepler
         "- Errors: #{summary['errors']}",
         "- Warnings: #{summary['warnings']}",
         "- Repositories: #{summary['repositories']}",
+        "- Selected projects: #{summary['selected_projects']}",
         "- Plans: #{summary['plans']}",
         "- Bridges: #{summary['bridges']}",
         "",

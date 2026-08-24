@@ -14,9 +14,10 @@ deployment as distinct actions.
 1. Determine the repository, provider, pipeline, run, candidate revision, and
    delivery environment involved. Do not assume the latest run matches the
    current checkout.
-2. In a generated Hub, read `AGENTS.md` and `docs/workflows/ci-cd.md`, use
-   provider metadata only to resolve ownership, and dispatch repository-owned
-   diagnosis or implementation before inspecting pipeline source.
+2. In a Kepler control project, read `AGENTS.md` and
+   `docs/workflows/ci-cd.md`. Sol may inspect selected-project pipeline source
+   and provider evidence read-only while preparing the Plan; Terra dispatches
+   approved diagnosis or implementation units.
 3. In the owning project, read applicable repository instructions before
    inspecting workflow definitions, scripts, logs, checks, or artifacts.
 4. Use a connected source-control or CI capability for current run evidence

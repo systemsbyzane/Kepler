@@ -1,7 +1,7 @@
 # multi-repository application Multi-Repo Coordination
 
 Use this workflow when one multi-repository application feature touches backend, frontend, and
-optionally charts. The hub coordinates the feature; repo-scoped Codex threads do
+optionally charts. The Kepler control project coordinates the feature; repo-scoped Codex tasks do
 the implementation.
 
 ## Coordinator Contract
@@ -11,41 +11,30 @@ The hub thread owns:
 - feature intent, non-goals, affected user flow, and security boundaries
 - backend/frontend/charts work split
 - choice of Local mode or Worktree mode for each repo thread
-- child-thread prompts and thread ids
-- cross-repo sequencing and approvals; status, evidence, and reviewer notes are
-  read only after a later explicit user request
+- ContextPacks, worker task IDs, and DispatchReceipts
+- cross-project sequencing, approvals, and validated WorkerResult ingestion
 
-The hub thread does not edit application code inside nested repos. It starts or
-continues the actual repo projects and summarizes their outputs.
+Sol does not edit selected projects. Terra starts or resumes the exact workers,
+records receipts, and stops. `/kepler status` ingests validated WorkerResults;
+worker transcripts are not synchronized.
 
 ## Thread Tool Flow
 
-1. Use `list_projects` and confirm these saved projects exist by exact
-   normalized real path:
-   - `development/backend`
-   - `development/frontend`
-   - `charts`
-   - `<remote-checkout>/backend` on `remote-validation` for runtime image builds
-   - `<remote-checkout>/frontend` on `remote-validation` for runtime image builds
-   - `<remote-checkout>/charts` on `remote-validation` for cluster rollouts
-   - `<remote-checkout>` on `remote-validation` for cluster validation
-   If a required existing checkout is missing, register it automatically and
-   refresh `list_projects` before continuing. Keep each stable logical key
-   separate from the opaque runtime project ID returned by the exact-path
-   match. Do not accept a display name as identity.
+1. Run `/kepler setup` and select every already-saved project by opaque runtime
+   ID and exact normalized path. If a project is absent, stop and use Codex's
+   supported open-folder or registration action outside setup, refresh the live
+   list, and select the exact match. Never accept a display name as identity.
 2. Choose mode:
    - Use **Local** mode when the user says current branch, current checkout,
      continue existing work, or push commits to the current branches.
    - Use **Worktree** mode when the user wants isolation, parallel experiments,
      or a branch that should not touch the current checkout.
-3. If the user asks to continue existing chats, use `list_threads` and
-   `send_message_to_thread` for the matching backend/frontend/charts threads.
-4. When the request starts in the Hub, use `create_thread` to create one
-   repo-scoped task per owning repo without requiring the user to request each
-   child task explicitly.
+3. Search recent tasks in each exact selected project and resume only an
+   objective match; otherwise create a normal worker task.
+4. Dispatch only identified ready units from the persisted Plan revision.
 5. Record logical project keys, runtime project IDs, child thread IDs, repo
    paths, branch expectations, and check status in a handoff packet or in the
-   Hub response, then return immediately. Do not poll, wait, or read child
+   DispatchReceipts, then return immediately. Do not poll, wait, or read child
    progress after dispatch.
 
 ## Repo Split
@@ -128,4 +117,3 @@ The hub final summary for a coordinated feature should include:
 - remote build/rollout/cluster validation thread ids if used
 - cross-repo compatibility notes
 - remaining manual checks before GitHub `@codex review`
-

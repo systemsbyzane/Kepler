@@ -8,16 +8,17 @@
   "properties": {
     "api_version": {"const": "kepler.dev/v1"},
     "kind": {"const": "ArchitectureMap"},
-    "metadata": {"type": "object"},
+    "metadata": {"type": "object", "required": ["confirmed"], "properties": {"confirmed": {"const": true}}},
     "workspaces": {
       "type": "object",
       "minProperties": 1,
       "additionalProperties": {
         "type": "object",
-        "required": ["codex_project", "repository", "domains"],
+        "required": ["codex_project", "project_path", "runtime_project_id", "domains"],
         "properties": {
           "codex_project": {"type": "string", "minLength": 1},
-          "repository": {"type": "string", "minLength": 1},
+          "project_path": {"type": "string", "minLength": 1},
+          "runtime_project_id": {"type": "string", "minLength": 1},
           "domains": {
             "type": "object",
             "additionalProperties": {

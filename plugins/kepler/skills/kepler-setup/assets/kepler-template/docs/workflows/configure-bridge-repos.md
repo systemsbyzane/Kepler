@@ -1,17 +1,17 @@
 # Configure bridge repositories
 
-This is the Hub-local runbook for advanced bridge configuration after initial
-setup: mode changes, manually declared repository sets, migration, or drift
-repair. Initial setup and ordinary existing-repository connection use `setup
-plan` and `setup connect`. This workflow configures declared checkouts, bridges,
-and Codex projects without creating implementation tasks.
+This is the control-project runbook for optional advanced bridge configuration
+after project-first setup: an explicit bridge attachment, mode change,
+migration, or drift repair. Ordinary setup never invokes it. This workflow
+configures only explicitly declared selected Git projects and never creates
+implementation tasks.
 
 ## Inputs and authority
 
 Read `AGENTS.md`, `kepler.yaml`, `hub/repositories.yaml`, this file, and
 `docs/workflows/repo-onboarding.md`. Validate every declaration against
 `hub/schemas/repository-declarations.schema.json`. Reject duplicate IDs,
-escaping paths, credentials, unknown providers/workloads, unverified default
+escaping paths, credentials, unknown providers, unverified default
 branches, or missing bridge/project fields.
 
 Each declaration supplies a stable logical project key. It does not and cannot
@@ -28,10 +28,8 @@ checkout, verify the exact Git root, origin when applicable, branch, SHA, and
 status. Preserve dirty and untracked content; do not clean, reset, stash,
 switch, fetch, or pull.
 
-For an authorized missing checkout, run `repo plan` and then `repo onboard`
-under its declared workload root. Use the `existing-local` adapter to register
-an existing unregistered checkout. Onboarding may install the declared bridge;
-the later bulk apply must treat it as an idempotent no-op.
+Bridge configuration accepts only a selected project whose exact checkout
+already exists. Do not clone, register, open, or relocate a checkout here.
 
 Repo-native mode requires explicit authorization and diff review per
 repository. No bridge command overwrites an existing instruction, override,

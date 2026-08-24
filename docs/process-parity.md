@@ -19,7 +19,7 @@ git -C <source-root> ls-files -co --exclude-standard
 The selected baseline inventory is captured dynamically rather than asserted
 as a hand-maintained count. Every selected reusable source path requires a
 mapped, generalized, or explicitly justified clean-break classification. Any newly selected source path,
-unclassified generated-Hub path, unclassified plugin-distribution path,
+unclassified generated-control-project path, unclassified plugin-distribution path,
 ambiguous mapping, missing candidate, invalid status, duplicate capability ID,
 or count drift fails the strict inventory.
 
@@ -48,22 +48,22 @@ shape:
 Replacement sources, the source control token, and explicit deny tokens are all
 treated as prohibited distributable vocabulary. Validation checks plaintext,
 hex, base64, and simple reconstructed forms. The map must remain Git-ignored
-and outside plugin, template, and generated-Hub content.
+and outside plugin, template, and generated-control-project content.
 
 ## Reusable capability mapping
 
 | Capability | Kepler counterpart |
 |---|---|
-| Distribution boundary | Generated-Hub ignore policy plus de-branding and strict inventory |
-| Coordination entrypoints | Hub `AGENTS.md`, README, Makefile, registry, and CLI |
+| Distribution boundary | Generated control-project ignore policy plus de-branding and strict inventory |
+| Coordination entrypoints | Control-project `AGENTS.md`, README, Makefile, registry, and CLI |
 | Runtime and regression suite | `lib/kepler/`, `bin/kepler`, and generated Ruby tests |
-| Workload guidance | Neutral development, charts, patching, research, environment, and compliance roots |
+| Removed workload topology | Explicit intentional exclusions; reusable domain method remains in focused plugin skills and ArchitectureMap domains |
 | Architecture and workflow method | Generated `docs/` hierarchy, including the guide index and Codex UI workflow |
 | Design history | Neutral coordination-layer and compliance workbench plans/specifications under `docs/superpowers/` |
 | Legacy task and workflow contracts | Explicit clean-break migration evidence; Kepler v1 uses Plan, ContextPack, DispatchReceipt, and WorkerResult contracts instead |
-| Repository onboarding | Provider-aware planning, verified clone/existing-local adapters, and atomic ignored registry updates |
+| Project onboarding | Selection from the live saved-project catalog by opaque runtime ID and exact normalized path; no repository scan or selected-project mutation |
 | Project identity and dispatch | Exact normalized path verification, separate logical/runtime IDs, search/resume-before-create, receipt, and no monitoring |
-| Repository bridges | Reference, materialized, and repo-native modes; read-only bulk plan; fail-closed apply; per-repository receipts |
+| Repository bridges | Optional advanced reference, materialized, and repo-native modes; absent by default; configured drift fails closed |
 | Doctor and coordination | Stable finding codes, no-fetch repository state, ArchitectureMap/Plan contract checks, bridge integrity, sidecar checks, and disabled automation policy |
 | Automation patterns | Disabled YAML specifications plus a separate approval-gated real-schedule method |
 | Development and charts | Owner dispatch, secure design/review gates, manifest rendering, and rollback evidence |
@@ -72,8 +72,8 @@ and outside plugin, template, and generated-Hub content.
 | Artifact workflows | Routing to installed Word, PDF, and spreadsheet capabilities with render/inspect/iterate gates |
 | Compliance and POA&M | Isolated program workspaces, evidence classification, workbook preservation, supported weakness candidates, sidecars, and human review |
 | STIG | Adaptive read-only evaluation, evidence provenance, applicability and inherited-control checks, draft/export readiness, remediation routing, summaries, and deterministic CKL round trips |
-| Setup | Preview-first credential-free bootstrap, atomic empty-target generation, idempotent validation-only reruns, and exact project registration |
-| Plugin lifecycle | Exact installed/target version planning, deterministic release notes, supported same-plugin reinstall, preservation checks, and explicit separation from generated-Hub migration |
+| Setup | Project-first live selection, exact identity verification, explicit ArchitectureMap confirmation, idempotent apply, and no repository mutation |
+| Plugin lifecycle | Exact installed/target version planning, deterministic release notes, supported same-plugin reinstall, preservation checks, and explicit separation from control-project migration |
 
 Semantic parity remains a second gate. The strict distribution inventory proves
 that every shipped candidate and plugin surface is classified and present;
@@ -113,10 +113,11 @@ planning. It cannot prove live Codex project registration, real task
 creation/resume behavior, or an installed plugin update.
 
 Installed runtime evidence remains unresolved unless a fresh task records the
-exact plugin version, current candidate root, a preserved synthetic generated
-Hub, exact-path project match, distinct logical and opaque runtime IDs, bridge
-configuration behavior, task create/resume identity, and confirmation that the
-Hub stopped without monitoring. Stale or cross-plugin evidence must fail.
+exact plugin version, current candidate root, a preserved synthetic control
+project, at least two exact-path project matches, distinct logical and opaque
+runtime IDs, requested/effective Sol and Terra models, optional-bridge behavior,
+task create/resume identity, WorkerResult ingestion, and receipt-stop without
+monitoring. Stale or cross-plugin evidence must fail.
 Installed upgrade acceptance separately requires explicit authorization,
 before/after exact versions, structured command results, preserved synthetic
 Hub and repository state, and a fresh task that loads the target build.

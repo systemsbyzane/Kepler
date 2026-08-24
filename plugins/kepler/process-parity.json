@@ -50,127 +50,20 @@
       ]
     },
     {
-      "id": "workspace-section-guides",
-      "status": "generalized",
-      "source_count": 7,
-      "source_paths": [
-        "*-*/README.md",
-        "patching/AGENTS.md",
-        "patching/README.md",
-        "patching/_repo-bridges/*/AGENTS.override.md",
-        "patching/_repo-bridges/*/README.md",
-        "patching/scripts/install-*-bridge.sh"
-      ],
-      "candidate_paths": [
-        "charts/README.md",
-        "development/README.md",
-        "environments/README.md",
-        "patching/README.md",
-        "research/README.md"
-      ]
-    },
-    {
-      "id": "compliance-workspace-guidance",
-      "status": "generalized",
-      "source_count": 2,
-      "source_paths": [
-        "compliance/AGENTS.md",
-        "compliance/README.md"
-      ],
-      "candidate_paths": [
-        "compliance/README.md"
-      ]
-    },
-    {
-      "id": "compliance-program-template",
-      "status": "generalized",
-      "source_count": 10,
-      "source_paths": [
-        "compliance/_program-template/AGENTS.md",
-        "compliance/_program-template/README.md",
-        "compliance/_program-template/context/.gitkeep",
-        "compliance/_program-template/control-assessments/.gitkeep",
-        "compliance/_program-template/evidence-index/.gitkeep",
-        "compliance/_program-template/generated-documents/.gitkeep",
-        "compliance/_program-template/input-templates/.gitkeep",
-        "compliance/_program-template/poam/.gitkeep",
-        "compliance/_program-template/source-documents/.gitkeep",
-        "compliance/_program-template/working-notes/.gitkeep"
-      ],
-      "candidate_paths": [
-        "compliance/_program-template/AGENTS.md",
-        "compliance/_program-template/README.md",
-        "compliance/_program-template/context/.gitkeep",
-        "compliance/_program-template/context/README.md",
-        "compliance/_program-template/control-assessments/.gitkeep",
-        "compliance/_program-template/control-assessments/control-assessment-template.md",
-        "compliance/_program-template/evidence-index/.gitkeep",
-        "compliance/_program-template/evidence-index/evidence-index-template.md",
-        "compliance/_program-template/deliverables/.gitkeep",
-        "compliance/_program-template/input-templates/.gitkeep",
-        "compliance/_program-template/input-templates/README.md",
-        "compliance/_program-template/poam/.gitkeep",
-        "compliance/_program-template/poam/poam-candidate-template.md",
-        "compliance/_program-template/source-documents/.gitkeep",
-        "compliance/_program-template/source-documents/README.md",
-        "compliance/_program-template/working-notes/.gitkeep",
-        "compliance/_program-template/working-records/.gitkeep"
-      ]
-    },
-    {
       "id": "reusable-method-guides",
       "status": "generalized",
-      "source_count": 49,
+      "source_count": 69,
       "source_paths": [
         "docs/README.md",
-        "docs/architecture/README.md",
-        "docs/architecture/decision-record-template.md",
-        "docs/architecture/design-review.md",
-        "docs/architecture/*-yaml-manifest-architecture.md",
-        "docs/architecture/*-coordination-layer.md",
-        "docs/*-ui-workflow.md",
-        "docs/compliance/README.md",
-        "docs/compliance/artifact-sensitivity-and-handling.md",
-        "docs/compliance/assessor-quality-bar.md",
-        "docs/compliance/control-assessment-methodology.md",
-        "docs/compliance/dod-rmf-ato-operating-model.md",
-        "docs/compliance/emass-template-workflow.md",
-        "docs/compliance/evidence-analysis-guide.md",
-        "docs/compliance/machine-readable-artifacts.md",
-        "docs/compliance/poam-generation-guide.md",
-        "docs/compliance/policy-generation-guide.md",
-        "docs/compliance/program-workspace-guide.md",
-        "docs/compliance/templates/control-assessment-notes.md",
-        "docs/compliance/templates/evidence-index.md",
-        "docs/compliance/templates/poam-analysis.md",
-        "docs/compliance/templates/program-agents.md",
-        "docs/compliance/templates/program-readme.md",
-        "docs/patching/README.md",
-        "docs/patching/image-*-compatibility.md",
-        "docs/review/README.md",
-        "docs/review/backend-review-guidelines.md",
-        "docs/review/charts-review-guidelines.md",
-        "docs/review/codex-review-readiness.md",
-        "docs/review/frontend-review-guidelines.md",
-        "docs/review/patching-review-guidelines.md",
-        "docs/review/pr-evidence-packet.md",
-        "docs/security/README.md",
-        "docs/security/secure-code-preflight.md",
-        "docs/security/threat-model*.md",
-        "docs/templates/implementation-plan.md",
-        "docs/templates/pr-readiness.md",
-        "docs/templates/*-feature-handoff.md",
-        "docs/templates/*-vm-validation-handoff.md",
-        "docs/templates/repo-bridge-agents-section.md",
-        "docs/templates/plan-intake.md",
-        "docs/templates/validation-evidence.md",
-        "docs/workflows/README.md",
-        "docs/workflows/*-thread-routing.md",
-        "docs/workflows/*-to-*-validation.md",
-        "docs/workflows/*-multirepo-coordination.md",
-        "docs/workflows/repo-bridge-design.md",
-        "docs/workflows/weekly-image-patch-review.md",
-        "docs/workflows/*-operations.md"
+        "docs/architecture/*.md",
+        "docs/codex-ui-workflow.md",
+        "docs/compliance/*.md",
+        "docs/compliance/templates/*.md",
+        "docs/patching/*.md",
+        "docs/review/*.md",
+        "docs/security/*.md",
+        "docs/templates/*.md",
+        "docs/workflows/*.md"
       ],
       "candidate_paths": [
         "docs/README.md",
@@ -260,10 +153,12 @@
     {
       "id": "coordination-control-data",
       "status": "generalized",
-      "source_count": 22,
+      "source_count": 32,
       "source_paths": [
         "hub/automations/**",
         "hub/bridges/**",
+        "hub/compatibility.json",
+        "hub/repositories.yaml",
         "hub/schemas/*.schema.json",
         "hub/templates/project-handoff.yaml",
         "hub/workflows/*.yaml"
@@ -303,14 +198,18 @@
     {
       "id": "coordination-layer-runtime",
       "status": "generalized",
-      "source_count": 9,
+      "source_count": 13,
       "source_paths": [
+        "lib/@coordination-layer/bridge_bulk_store.rb",
+        "lib/@coordination-layer/bridge_store.rb",
         "lib/@coordination-layer/cli.rb",
         "lib/@coordination-layer/config.rb",
         "lib/@coordination-layer/doctor.rb",
         "lib/@coordination-layer/inspections.rb",
         "lib/@coordination-layer/repo_planner.rb",
+        "lib/@coordination-layer/repository_store.rb",
         "lib/@coordination-layer/route_planner.rb",
+        "lib/@coordination-layer/setup_store.rb",
         "lib/@coordination-layer/support.rb",
         "lib/@coordination-layer/task_store.rb",
         "lib/@coordination-layer/workflow.rb"
@@ -337,13 +236,11 @@
     {
       "id": "operator-helper-scripts",
       "status": "generalized",
-      "source_count": 2,
+      "source_count": 1,
       "source_paths": [
-        "scripts/new-*-feature.sh",
         "scripts/*-preflight.sh"
       ],
       "candidate_paths": [
-        "scripts/new-multirepo-feature.sh",
         "scripts/remote-validation-preflight.sh"
       ]
     },
@@ -361,8 +258,10 @@
     {
       "id": "plugin-metadata-and-parity-contract",
       "status": "added",
-      "source_count": 0,
-      "source_paths": [],
+      "source_count": 1,
+      "source_paths": [
+        "scripts/validate-deliverable.py"
+      ],
       "candidate_paths": [],
       "plugin_count": 4,
       "plugin_paths": [
@@ -598,7 +497,7 @@
       "source_count": 0,
       "source_paths": [],
       "candidate_paths": [],
-      "plugin_count": 20,
+      "plugin_count": 21,
       "plugin_paths": [
         "skills/kepler-setup/SKILL.md",
         "skills/kepler-setup/agents/**",
@@ -635,8 +534,12 @@
       "source_count": 0,
       "source_paths": [],
       "candidate_paths": [],
-      "plugin_count": 4,
+      "plugin_count": 8,
       "plugin_paths": [
+        ".mcp.json",
+        "scripts/kepler_dispatch_mcp.py",
+        "scripts/launch_kepler_dispatch_mcp",
+        "scripts/tests/test_kepler_dispatch_mcp.py",
         "skills/kepler/**"
       ],
       "source_mapping_ids": [
@@ -646,6 +549,51 @@
     }
   ],
   "exclusions": [
+    {
+      "id": "legacy-handoff-helper",
+      "status": "intentionally_excluded",
+      "source_count": 1,
+      "source_paths": [
+        "scripts/new-*-feature.sh"
+      ],
+      "candidate_paths": [],
+      "reason": "Kepler v1 replaces workload task and handoff packet generation with revisioned Plans, ContextPacks, and DispatchReceipts."
+    },
+    {
+      "id": "workspace-section-guides",
+      "status": "intentionally_excluded",
+      "source_count": 6,
+      "source_paths": [
+        "charts/README.md",
+        "development/README.md",
+        "environments/README.md",
+        "operations/README.md",
+        "patching/README.md",
+        "research/README.md"
+      ],
+      "candidate_paths": [],
+      "reason": "Kepler v1 deliberately replaces generated workload directories and embedded bridge installers with saved-project routing and optional repository bridges; reusable domain method remains in focused plugin skills."
+    },
+    {
+      "id": "compliance-workspace-guidance",
+      "status": "intentionally_excluded",
+      "source_count": 1,
+      "source_paths": [
+        "compliance/README.md"
+      ],
+      "candidate_paths": [],
+      "reason": "Kepler v1 deliberately removes the generated compliance workload directory; reusable compliance guidance remains in the focused compliance skill."
+    },
+    {
+      "id": "compliance-program-template",
+      "status": "intentionally_excluded",
+      "source_count": 17,
+      "source_paths": [
+        "compliance/_program-template/**"
+      ],
+      "candidate_paths": [],
+      "reason": "Kepler v1 deliberately removes the generated compliance program workspace template; artifact and compliance methods remain available without pre-creating pseudo-project directories."
+    },
     {
       "id": "generated-operational-state",
       "status": "intentionally_excluded",

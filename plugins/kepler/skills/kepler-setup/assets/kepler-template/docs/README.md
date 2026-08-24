@@ -64,7 +64,7 @@ the Hub into a monorepo.
 Repository-specific `AGENTS.md` files remain authoritative for code structure,
 commands, tests, generated files, and implementation mechanics. Program
 workspaces remain authoritative for their facts and evidence. These Hub docs
-define the shared posture: dispatch before owner analysis, design and security
-review where risk warrants them, explicit approval boundaries, evidence-backed
+define the shared posture: Sol may inspect selected-project evidence read-only
+while planning, design and security review apply where risk warrants them, explicit approval boundaries, evidence-backed
 validation, and separation between local source changes and live-environment
 inspection.
