@@ -239,11 +239,14 @@
       "summary": "Same-task Sol planning and review routing.",
       "changes": [
         {"category": "fixed", "text": "Kept review-only Plans and Plan revisions in the current task when it already runs Sol with high reasoning, instead of creating a redundant control-project task."},
+        {"category": "fixed", "text": "Required every new implementation, review, research, and synthesis worker to use the permission-preserving bootstrap and final-task verification before receiving its prompt."},
+        {"category": "fixed", "text": "Rejected direct-created, mismatched, or unattested DispatchReceipts so a managed workspace sandbox cannot be recorded as inherited global configuration."},
         {"category": "changed", "text": "Made planner bootstrap return a no-op reuse receipt for an existing Sol High task unless the user explicitly requests a separate planner."}
       ],
       "breaking_changes": [],
       "migration": [
         "Start a fresh Codex task after upgrading so the updated planner-routing instructions and MCP tool schema load.",
+        "New generated control projects require permission-attested DispatchReceipts; existing generated control projects remain preserved.",
         "Existing generated control projects remain valid and are not regenerated automatically."
       ]
     }

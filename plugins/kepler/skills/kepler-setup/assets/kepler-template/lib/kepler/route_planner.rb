@@ -71,7 +71,11 @@ module Kepler
           "fields" => %w[
             logical_project_key runtime_project_id project_path task_id mode
             requested_model effective_model requested_thinking effective_thinking
-            authorization_boundary
+            authorization_boundary creation_method bootstrap_schema_version
+            bootstrap_task_id configuration_verification_schema_version
+            configuration_verified configuration_verified_task_id
+            configuration_verified_before_prompt configuration_mode
+            permission_profile sandbox_mode approval_policy
           ],
           "monitoring_permitted" => false
         },
@@ -79,9 +83,10 @@ module Kepler
         "steps" => [
           "Verify the selected saved project by opaque runtime ID and exact normalized path.",
           "Search recent tasks in that exact project and resume only an objective match.",
-          "Otherwise create a #{mode} task with model #{dispatcher.fetch('model')} and thinking #{dispatcher.fetch('thinking')}.",
+          "Otherwise bootstrap an empty permission-preserving Local task with model #{dispatcher.fetch('model')} and thinking #{dispatcher.fetch('thinking')}; never directly create a prompted worker.",
+          "For Worktree mode, hand off the empty task, then verify the exact final task and effective configuration before its prompt.",
           "Send the ContextPack as non-exclusive initial context and request a structured WorkerResult.",
-          "Record requested and effective runtime fields in the DispatchReceipt.",
+          "Record bootstrap and final-task verification evidence plus requested and effective runtime fields in the DispatchReceipt.",
           "Return the receipt immediately; do not inspect artifacts, poll, wait, or monitor."
         ]
       }

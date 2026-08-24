@@ -411,7 +411,18 @@ class KeplerTest < Minitest::Test
           "effective_model" => "gpt-5.6-terra",
           "requested_thinking" => "high",
           "effective_thinking" => "high",
-          "authorization_boundary" => "No remote writes."
+          "authorization_boundary" => "No remote writes.",
+          "creation_method" => "kepler-bootstrap-worker-task",
+          "bootstrap_schema_version" => "kepler.worker-task-bootstrap/v1",
+          "bootstrap_task_id" => "task-alpha-bootstrap-001",
+          "configuration_verification_schema_version" => "kepler.worker-task-verification/v1",
+          "configuration_verified" => true,
+          "configuration_verified_task_id" => "task-alpha-001",
+          "configuration_verified_before_prompt" => true,
+          "configuration_mode" => "global-config",
+          "permission_profile" => nil,
+          "sandbox_mode" => "danger-full-access",
+          "approval_policy" => "on-request"
         }
       )
       store.record_dispatch(
@@ -448,6 +459,84 @@ class KeplerTest < Minitest::Test
       summary = store.ingest_result(worker_result)
       assert_equal "completed", summary["state"]
     end
+  end
+
+  def test_dispatch_receipt_rejects_direct_creation_and_false_configuration_evidence
+    configured_control do |root, config, _directory, _result, alpha, _beta|
+      source = File.join(root, "plan.yaml")
+      Kepler::Support.atomic_yaml(source, plan_document)
+      store = Kepler::PlanStore.new(config)
+      store.apply(source)
+      receipt = File.join(root, "receipt.yaml")
+      Kepler::Support.atomic_yaml(
+        receipt,
+        {
+          "api_version" => "kepler.dev/v1",
+          "kind" => "DispatchReceipt",
+          "task_id" => "task-alpha-001",
+          "runtime_project_id" => "runtime-alpha-001",
+          "project_path" => alpha,
+          "mode" => "worktree",
+          "requested_model" => "gpt-5.6-terra",
+          "effective_model" => "gpt-5.6-terra",
+          "requested_thinking" => "high",
+          "effective_thinking" => "high",
+          "authorization_boundary" => "No remote writes.",
+          "creation_method" => "direct-project-worktree",
+          "bootstrap_schema_version" => "kepler.worker-task-bootstrap/v1",
+          "bootstrap_task_id" => "task-alpha-bootstrap-001",
+          "configuration_verification_schema_version" => "kepler.worker-task-verification/v1",
+          "configuration_verified" => true,
+          "configuration_verified_task_id" => "task-alpha-001",
+          "configuration_verified_before_prompt" => true,
+          "configuration_mode" => "global-config",
+          "permission_profile" => nil,
+          "sandbox_mode" => "danger-full-access",
+          "approval_policy" => "on-request"
+        }
+      )
+      error = assert_raises(Kepler::ValidationError) do
+        store.record_dispatch(
+          id: "synthetic-plan",
+          revision: 1,
+          unit_id: "alpha-change",
+          receipt_path: receipt
+        )
+      end
+      assert_includes error.message, "must use the Kepler worker bootstrap"
+      assert_equal "ready", store.summary(store.load("synthetic-plan")).dig("unit_status", 0, "state")
+    end
+  end
+
+  def test_dispatch_receipt_rejects_verification_for_another_task
+    receipt = {
+      "api_version" => "kepler.dev/v1",
+      "kind" => "DispatchReceipt",
+      "task_id" => "task-alpha-001",
+      "runtime_project_id" => "runtime-alpha-001",
+      "project_path" => "/synthetic/alpha",
+      "mode" => "worktree",
+      "requested_model" => "gpt-5.6-terra",
+      "effective_model" => "gpt-5.6-terra",
+      "requested_thinking" => "high",
+      "effective_thinking" => "high",
+      "authorization_boundary" => "No remote writes.",
+      "creation_method" => "kepler-bootstrap-worker-task",
+      "bootstrap_schema_version" => "kepler.worker-task-bootstrap/v1",
+      "bootstrap_task_id" => "task-alpha-bootstrap-001",
+      "configuration_verification_schema_version" => "kepler.worker-task-verification/v1",
+      "configuration_verified" => true,
+      "configuration_verified_task_id" => "different-task",
+      "configuration_verified_before_prompt" => true,
+      "configuration_mode" => "global-config",
+      "permission_profile" => nil,
+      "sandbox_mode" => "danger-full-access",
+      "approval_policy" => "on-request"
+    }
+    error = assert_raises(Kepler::ValidationError) do
+      Kepler::Contracts.dispatch_receipt!(receipt)
+    end
+    assert_includes error.message, "does not match the final worker task"
   end
 
   def test_cli_help_exposes_explicit_primary_commands

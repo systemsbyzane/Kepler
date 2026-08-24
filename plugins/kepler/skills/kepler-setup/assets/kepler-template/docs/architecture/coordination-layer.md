@@ -28,8 +28,10 @@ calculation over Plan dependencies and validated WorkerResults.
 - Sol creates and revises Plans. Planning may inspect evidence and control-room
   state, but it cannot mutate connected repositories or dispatch workers.
 - Terra dispatches only ready units from one explicit Plan revision. It
-  verifies exact project/path identity, creates or resumes normal Codex tasks,
-  records receipts, returns them, and stops without monitoring.
+  verifies exact project/path identity, uses the permission-preserving
+  bootstrap for every new task, verifies the final Local or Worktree task
+  before its prompt, records attested receipts, returns them, and stops without
+  monitoring.
 - Workers remain directly accessible, fully capable Codex tasks. A ContextPack
   is initial relevant context, never a capability or inspection boundary.
 - Kepler status is derived from structured Plan, receipt, and result state. It
@@ -39,9 +41,11 @@ calculation over Plan dependencies and validated WorkerResults.
 
 Unknown topology, an unconfirmed ArchitectureMap, stale Plan revision,
 waiting unit, identity mismatch, missing bridge handoff, or ContextPack budget
-overrun fails closed. Kepler reports the exact mismatch and does not guess a
-target, pick a newer revision, or silently perform owner work in the control
-project.
+overrun fails closed. Direct prompted task creation, a non-empty unverified
+task, or any effective model, reasoning, approval, sandbox, permission-profile,
+or path mismatch also fails closed. Kepler reports the exact mismatch and does
+not guess a target, pick a newer revision, or silently perform owner work in
+the control project.
 
 Commits, remote writes, publication, deployment, shared-environment mutation,
 external communication, compliance submission, risk acceptance, and closure

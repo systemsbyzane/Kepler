@@ -13,6 +13,11 @@ separately authorizes a new implementation Plan.
 When the current control task already runs `gpt-5.6-sol` with high reasoning,
 prepare and persist that review-only Plan in the same task. A new review target,
 Plan ID, or revision is not a reason to bootstrap another planner task.
+Every new review worker still follows the root Kepler dispatch contract:
+bootstrap an empty permission-preserving task, hand it off when Worktree mode is
+required, verify the final task before its prompt, and fail closed on any
+configuration mismatch. Review-only authorization does not permit direct
+prompted task creation or a weaker sandbox.
 
 ## Resolve the review target
 

@@ -10,6 +10,7 @@ import tempfile
 import textwrap
 import unittest
 from pathlib import Path
+from unittest import mock
 
 
 SCRIPT = Path(__file__).resolve().parents[1] / "kepler_dispatch_mcp.py"
@@ -21,6 +22,7 @@ SPEC.loader.exec_module(MODULE)
 
 FAKE_CODEX = r'''#!/usr/bin/env python3
 import json
+import os
 import sys
 
 for line in sys.stdin:
@@ -54,6 +56,28 @@ for line in sys.stdin:
             "approvalPolicy": "on-request",
             "sandbox": {"type": "dangerFullAccess"},
             "instructionSources": [params["cwd"] + "/AGENTS.md"],
+        }
+    elif method == "thread/resume":
+        active_profile = os.environ.get("FAKE_RESUME_PROFILE")
+        result = {
+            "thread": {
+                "id": message["params"]["threadId"],
+                "turns": ["existing-turn"] if os.environ.get("FAKE_RESUME_NONEMPTY") else [],
+            },
+            "model": os.environ.get("FAKE_RESUME_MODEL", "gpt-5.6-terra"),
+            "cwd": os.environ["FAKE_PROJECT_CWD"],
+            "reasoningEffort": os.environ.get("FAKE_RESUME_THINKING", "high"),
+            "activePermissionProfile": (
+                {"id": active_profile} if active_profile else None
+            ),
+            "approvalPolicy": os.environ.get(
+                "FAKE_RESUME_APPROVAL", "on-request"
+            ),
+            "sandbox": {
+                "type": os.environ.get(
+                    "FAKE_RESUME_SANDBOX", "dangerFullAccess"
+                )
+            },
         }
     elif method == "thread/name/set":
         result = {}
@@ -106,6 +130,73 @@ class KeplerDispatchMcpTest(unittest.TestCase):
                 permission_profile="missing",
                 codex_executable=str(self.fake_codex),
             )
+
+    def test_verify_worker_requires_exact_effective_configuration_before_prompt(self) -> None:
+        with mock.patch.dict(
+            os.environ, {"FAKE_PROJECT_CWD": str(self.project)}, clear=False
+        ):
+            result = MODULE.verify_worker_task(
+                thread_id="thread-test",
+                cwd=str(self.project),
+                model="gpt-5.6-terra",
+                thinking="high",
+                configuration_mode="global-config",
+                approval_policy="on-request",
+                sandbox_mode="danger-full-access",
+                codex_executable=str(self.fake_codex),
+            )
+        self.assertEqual("kepler.worker-task-verification/v1", result["schemaVersion"])
+        self.assertTrue(result["verified"])
+        self.assertEqual("thread-test", result["threadId"])
+        self.assertEqual("danger-full-access", result["sandboxMode"])
+        self.assertEqual("dangerFullAccess", result["sandbox"]["type"])
+        self.assertTrue(result["empty"])
+
+    def test_verify_worker_rejects_managed_workspace_sandbox(self) -> None:
+        with mock.patch.dict(
+            os.environ,
+            {
+                "FAKE_PROJECT_CWD": str(self.project),
+                "FAKE_RESUME_SANDBOX": "workspaceWrite",
+            },
+            clear=False,
+        ):
+            with self.assertRaisesRegex(
+                MODULE.DispatchError, "did not preserve the effective sandbox_mode"
+            ):
+                MODULE.verify_worker_task(
+                    thread_id="thread-test",
+                    cwd=str(self.project),
+                    model="gpt-5.6-terra",
+                    thinking="high",
+                    configuration_mode="global-config",
+                    approval_policy="on-request",
+                    sandbox_mode="danger-full-access",
+                    codex_executable=str(self.fake_codex),
+                )
+
+    def test_verify_worker_rejects_prompted_task(self) -> None:
+        with mock.patch.dict(
+            os.environ,
+            {
+                "FAKE_PROJECT_CWD": str(self.project),
+                "FAKE_RESUME_NONEMPTY": "1",
+            },
+            clear=False,
+        ):
+            with self.assertRaisesRegex(
+                MODULE.DispatchError, "must be verified before its prompt"
+            ):
+                MODULE.verify_worker_task(
+                    thread_id="thread-test",
+                    cwd=str(self.project),
+                    model="gpt-5.6-terra",
+                    thinking="high",
+                    configuration_mode="global-config",
+                    approval_policy="on-request",
+                    sandbox_mode="danger-full-access",
+                    codex_executable=str(self.fake_codex),
+                )
 
     def test_planner_bootstrap_is_hard_bound_and_preserves_config(self) -> None:
         result = MODULE.bootstrap_planner_task(
@@ -171,6 +262,9 @@ class KeplerDispatchMcpTest(unittest.TestCase):
         self.assertIn(
             "current_thinking", MODULE.PLANNER_TOOL["inputSchema"]["required"]
         )
+        verifier = MODULE.VERIFY_WORKER_TOOL["inputSchema"]
+        self.assertIn("configuration_mode", verifier["required"])
+        self.assertIn("approval_policy", verifier["required"])
 
     def test_stdio_planner_call_reuses_current_sol_high_task(self) -> None:
         response = MODULE._handle_request(

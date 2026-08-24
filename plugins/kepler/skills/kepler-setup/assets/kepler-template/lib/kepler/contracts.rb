@@ -125,8 +125,45 @@ module Kepler
 
     def dispatch_receipt!(value)
       document!(value, "DispatchReceipt")
-      %w[task_id runtime_project_id project_path mode requested_model effective_model requested_thinking effective_thinking authorization_boundary].each do |key|
+      %w[task_id runtime_project_id project_path mode requested_model effective_model requested_thinking effective_thinking authorization_boundary creation_method bootstrap_schema_version bootstrap_task_id configuration_verification_schema_version configuration_verified configuration_verified_task_id configuration_verified_before_prompt configuration_mode approval_policy].each do |key|
         raise ValidationError, "DispatchReceipt is missing #{key}" unless Support.present?(value[key])
+      end
+      %w[permission_profile sandbox_mode].each do |key|
+        raise ValidationError, "DispatchReceipt is missing #{key}" unless value.key?(key)
+      end
+      unless (value["approval_policy"].is_a?(String) || value["approval_policy"].is_a?(Hash)) && Support.present?(value["approval_policy"])
+        raise ValidationError, "DispatchReceipt approval policy is invalid"
+      end
+      unless value["requested_model"] == value["effective_model"]
+        raise ValidationError, "DispatchReceipt effective model does not match requested model"
+      end
+      unless value["requested_thinking"] == value["effective_thinking"]
+        raise ValidationError, "DispatchReceipt effective thinking does not match requested thinking"
+      end
+      unless value["creation_method"] == "kepler-bootstrap-worker-task"
+        raise ValidationError, "DispatchReceipt must use the Kepler worker bootstrap"
+      end
+      unless value["bootstrap_schema_version"] == "kepler.worker-task-bootstrap/v1"
+        raise ValidationError, "DispatchReceipt bootstrap evidence is unsupported"
+      end
+      unless value["configuration_verification_schema_version"] == "kepler.worker-task-verification/v1"
+        raise ValidationError, "DispatchReceipt configuration verification evidence is unsupported"
+      end
+      unless value["configuration_verified"] == true && value["configuration_verified_before_prompt"] == true
+        raise ValidationError, "DispatchReceipt configuration must be verified before the worker prompt"
+      end
+      unless value["configuration_verified_task_id"] == value["task_id"]
+        raise ValidationError, "DispatchReceipt verification task does not match the final worker task"
+      end
+      case value["configuration_mode"]
+      when "global-config"
+        raise ValidationError, "DispatchReceipt global config requires sandbox_mode" unless Support.present?(value["sandbox_mode"])
+        raise ValidationError, "DispatchReceipt global config cannot select permission_profile" if Support.present?(value["permission_profile"])
+      when "permission-profile"
+        raise ValidationError, "DispatchReceipt permission profile is required" unless Support.present?(value["permission_profile"])
+        raise ValidationError, "DispatchReceipt permission profile cannot select sandbox_mode" if Support.present?(value["sandbox_mode"])
+      else
+        raise ValidationError, "DispatchReceipt configuration mode is unsupported"
       end
       value
     end

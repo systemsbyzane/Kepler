@@ -57,9 +57,13 @@ planner.
 
 Terra runs on `gpt-5.6-terra` with high reasoning. It receives one approved
 ready unit and its compiled ContextPack, verifies the exact Codex project and
-path, creates or resumes the normal local worker with the effective global
-approval and sandbox configuration, returns the receipt with requested
-and effective runtime and configuration fields, records it with
+path, and creates every new worker through `bootstrap_worker_task`; this also
+applies to review and synthesis workers. Direct prompted task creation is not a
+valid Kepler dispatch path. Terra verifies the empty final task with
+`verify_worker_task`, then sends the ContextPack only after its effective model,
+reasoning, approval, sandbox or permission profile, and path all match. It
+returns the verified receipt with requested and effective runtime and
+configuration fields, records it with
 `bin/kepler dispatch record`, and stops. Terra must not re-plan, invent a
 target, implement, summarize the worker, or monitor it.
 

@@ -25,9 +25,16 @@ satisfy the Sol runtime contract.
 4. Prepare a non-exclusive ContextPack. Choose the smallest lead Kepler skill
    and currently applicable companions; do not preload speculative skills.
 5. Create or resume Terra with `gpt-5.6-terra` and high reasoning.
-6. Terra creates or resumes the ordinary worker in the exact project, records
-   requested/effective runtime values, returns the receipt, and stops.
-7. Do not poll, wait, monitor, copy transcripts, or read progress.
+6. For every new worker, Terra uses `bootstrap_worker_task` at the exact saved
+   path. Direct prompted task creation is prohibited for implementation,
+   review, research, and synthesis alike.
+7. For Worktree mode, hand off the empty bootstrap task. Verify the exact final
+   Local or Worktree task with `verify_worker_task` before sending its prompt.
+8. Record only a receipt whose bootstrap and final verification evidence prove
+   the effective model, reasoning, approval, sandbox or permission profile,
+   final path, and empty pre-prompt state.
+9. Fail closed on missing or mismatched evidence. Do not poll, wait, monitor,
+   copy transcripts, or read progress after the verified receipt.
 
 Workers remain directly accessible and follow project evidence beyond initial
 ContextPack paths when necessary. When new evidence crosses domains, read the

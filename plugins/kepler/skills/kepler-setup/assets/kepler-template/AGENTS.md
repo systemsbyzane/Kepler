@@ -15,8 +15,11 @@ not a source monorepo and does not own or contain their repositories.
   task is already verified as Sol with high reasoning. A new review Plan or
   revision does not create another control-project task.
 - `/kepler dispatch` uses Terra on `gpt-5.6-terra` for exact task creation or
-  resume. Terra records requested and effective model evidence, returns the
-  receipt, and stops without monitoring.
+  resume. Every new implementation, review, research, or synthesis worker must
+  use the permission-preserving Kepler bootstrap and final-task verification;
+  direct prompted task creation is invalid. Terra records requested and
+  effective runtime and configuration evidence, returns the receipt, and stops
+  without monitoring.
 - `/kepler status` and `/kepler doctor` read structured state. They do not
   synchronize or summarize worker transcripts.
 

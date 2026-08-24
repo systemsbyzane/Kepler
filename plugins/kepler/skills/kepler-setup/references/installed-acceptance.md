@@ -28,8 +28,11 @@ Verify the installed enabled record and exact version, then start a fresh task.
 5. Run `/kepler plan` on Sol and persist revision 1. Refine the objective in
    ordinary conversation and persist revision 2.
 6. Attempt revision-1 dispatch and require stale-revision rejection.
-7. Run `/kepler dispatch` for revision 2. Require Terra task creation/resume
-   with requested and effective `gpt-5.6-terra` plus reasoning evidence.
+7. Run `/kepler dispatch` for revision 2. Require every new worker to use
+   `bootstrap_worker_task`, verify the exact final task with
+   `verify_worker_task` before its prompt, and record requested/effective
+   `gpt-5.6-terra`, reasoning, approval, sandbox or permission-profile, path,
+   and empty pre-prompt evidence. Direct prompted creation fails acceptance.
 8. Verify Sol used requested/effective `gpt-5.6-sol` evidence and performed
    read-only planning inspection only.
 9. Open the ordinary worker directly. Verify its ContextPack contains
@@ -43,13 +46,15 @@ Verify the installed enabled record and exact version, then start a fresh task.
 The acceptance record must use schema `kepler.runtime-acceptance/v1` and include
 plugin/version, candidate root, `control_project_path`, clean profile path,
 selected logical keys, runtime project IDs, exact paths, Plan
-revisions, task IDs, modes, requested/effective model and reasoning values,
-receipts, WorkerResult IDs, status transitions, commands and exit codes, and
-before/after Git status. Never record credentials or repository contents.
+revisions, bootstrap and final task IDs, modes, requested/effective model and
+reasoning values, effective configuration attestations, receipts, WorkerResult
+IDs, status transitions, commands and exit codes, and before/after Git status.
+Never record credentials or repository contents.
 
 Any missing exact identity, model evidence, confirmation, stale-revision
-rejection, direct-worker access, create/resume proof, WorkerResult progression,
-or no-monitoring proof blocks release.
+rejection, permission-preserving bootstrap, final pre-prompt configuration
+verification, direct-worker access, create/resume proof, WorkerResult
+progression, or no-monitoring proof blocks release.
 
 ## Plugin upgrade acceptance
 

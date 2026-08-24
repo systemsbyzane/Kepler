@@ -24,6 +24,7 @@ THINKING_LEVELS = {"low", "medium", "high", "xhigh", "max", "ultra"}
 SAFE_IDENTIFIER = re.compile(r"^[A-Za-z0-9_.:+-]+$")
 SOL_MODEL = "gpt-5.6-sol"
 SOL_THINKING = "high"
+CONFIGURATION_MODES = {"global-config", "permission-profile"}
 
 
 class DispatchError(RuntimeError):
@@ -209,6 +210,49 @@ def _legacy_sandbox_receipt(sandbox_mode: str) -> str:
     return receipt
 
 
+def _validated_verification_inputs(
+    *,
+    thread_id: str,
+    cwd: str,
+    model: str,
+    thinking: str,
+    configuration_mode: str,
+    approval_policy: Any,
+    permission_profile: Optional[str],
+    sandbox_mode: Optional[str],
+) -> Dict[str, Any]:
+    values = _validated_inputs(cwd, thread_id, model, thinking, permission_profile)
+    if not SAFE_IDENTIFIER.fullmatch(thread_id):
+        raise DispatchError("thread_id contains unsupported characters")
+    if configuration_mode not in CONFIGURATION_MODES:
+        raise DispatchError(
+            "configuration_mode must be one of: "
+            + ", ".join(sorted(CONFIGURATION_MODES))
+        )
+    if not isinstance(approval_policy, (str, dict)) or not approval_policy:
+        raise DispatchError("approval_policy must be a non-empty string or object")
+    if configuration_mode == "global-config":
+        if permission_profile is not None:
+            raise DispatchError("global-config verification cannot select a permission profile")
+        if not isinstance(sandbox_mode, str):
+            raise DispatchError("global-config verification requires sandbox_mode")
+        _legacy_sandbox_receipt(sandbox_mode)
+    else:
+        if permission_profile is None:
+            raise DispatchError("permission-profile verification requires permission_profile")
+        if sandbox_mode is not None:
+            raise DispatchError("permission-profile verification cannot select sandbox_mode")
+    values.update(
+        {
+            "thread_id": thread_id,
+            "configuration_mode": configuration_mode,
+            "approval_policy": approval_policy,
+            "sandbox_mode": sandbox_mode,
+        }
+    )
+    return values
+
+
 def bootstrap_worker_task(
     *,
     cwd: str,
@@ -305,6 +349,88 @@ def bootstrap_worker_task(
         }
 
 
+def verify_worker_task(
+    *,
+    thread_id: str,
+    cwd: str,
+    model: str,
+    thinking: str,
+    configuration_mode: str,
+    approval_policy: Any,
+    permission_profile: Optional[str] = None,
+    sandbox_mode: Optional[str] = None,
+    codex_executable: Optional[str] = None,
+) -> Dict[str, Any]:
+    values = _validated_verification_inputs(
+        thread_id=thread_id,
+        cwd=cwd,
+        model=model,
+        thinking=thinking,
+        configuration_mode=configuration_mode,
+        approval_policy=approval_policy,
+        permission_profile=permission_profile,
+        sandbox_mode=sandbox_mode,
+    )
+    executable = _resolve_codex_executable(codex_executable)
+    with AppServerClient(executable) as client:
+        result = client.request("thread/resume", {"threadId": values["thread_id"]})
+
+    thread = result.get("thread")
+    if not isinstance(thread, dict) or thread.get("id") != values["thread_id"]:
+        raise DispatchError("thread/resume did not return the exact worker task")
+    turns = thread.get("turns")
+    if not isinstance(turns, list) or turns:
+        raise DispatchError(
+            "worker task is not empty; configuration must be verified before its prompt"
+        )
+    try:
+        actual_cwd = str(Path(result.get("cwd", "")).expanduser().resolve(strict=True))
+    except (OSError, RuntimeError):
+        raise DispatchError("thread/resume did not return a resolvable cwd")
+    if actual_cwd != values["cwd"]:
+        raise DispatchError("thread/resume cwd does not match the exact worker path")
+    if result.get("model") != values["model"]:
+        raise DispatchError("thread/resume did not preserve the effective model")
+    if result.get("reasoningEffort") != values["thinking"]:
+        raise DispatchError("thread/resume did not preserve the effective reasoning level")
+    if result.get("approvalPolicy") != values["approval_policy"]:
+        raise DispatchError("thread/resume did not preserve the effective approval_policy")
+
+    active_profile = result.get("activePermissionProfile")
+    if values["configuration_mode"] == "permission-profile":
+        if (
+            not isinstance(active_profile, dict)
+            or active_profile.get("id") != values["permission_profile"]
+        ):
+            raise DispatchError("thread/resume did not preserve the permission profile")
+    else:
+        if active_profile is not None:
+            raise DispatchError("thread/resume unexpectedly selected a permission profile")
+        sandbox = result.get("sandbox")
+        if (
+            not isinstance(sandbox, dict)
+            or sandbox.get("type")
+            != _legacy_sandbox_receipt(values["sandbox_mode"])
+        ):
+            raise DispatchError("thread/resume did not preserve the effective sandbox_mode")
+
+    return {
+        "schemaVersion": "kepler.worker-task-verification/v1",
+        "verified": True,
+        "threadId": values["thread_id"],
+        "cwd": actual_cwd,
+        "model": result.get("model"),
+        "thinking": result.get("reasoningEffort"),
+        "configurationMode": values["configuration_mode"],
+        "permissionProfile": values["permission_profile"],
+        "activePermissionProfile": active_profile,
+        "sandboxMode": values["sandbox_mode"],
+        "approvalPolicy": result.get("approvalPolicy"),
+        "sandbox": result.get("sandbox"),
+        "empty": True,
+    }
+
+
 def bootstrap_planner_task(
     *,
     cwd: str,
@@ -381,6 +507,46 @@ WORKER_TOOL = {
     },
 }
 
+VERIFY_WORKER_TOOL = {
+    "name": "verify_worker_task",
+    "description": (
+        "Fail-closed verification for an empty local or handed-off Worktree task. "
+        "Call after bootstrap and any Worktree handoff, but before sending the worker "
+        "prompt. The tool resumes the exact task read-only and verifies its path, model, "
+        "reasoning, approval policy, sandbox or permission profile, and empty turn state."
+    ),
+    "inputSchema": {
+        "type": "object",
+        "additionalProperties": False,
+        "required": [
+            "thread_id",
+            "cwd",
+            "model",
+            "thinking",
+            "configuration_mode",
+            "approval_policy",
+        ],
+        "properties": {
+            "thread_id": {"type": "string", "minLength": 1},
+            "cwd": {"type": "string", "description": "Exact final worker path."},
+            "model": {"type": "string", "minLength": 1},
+            "thinking": {"type": "string", "enum": sorted(THINKING_LEVELS)},
+            "configuration_mode": {
+                "type": "string",
+                "enum": sorted(CONFIGURATION_MODES),
+            },
+            "approval_policy": {
+                "oneOf": [
+                    {"type": "string", "minLength": 1},
+                    {"type": "object", "minProperties": 1},
+                ]
+            },
+            "permission_profile": {"type": "string", "minLength": 1},
+            "sandbox_mode": {"type": "string", "minLength": 1},
+        },
+    },
+}
+
 PLANNER_TOOL = {
     "name": "bootstrap_planner_task",
     "description": (
@@ -426,7 +592,7 @@ PLANNER_TOOL = {
     },
 }
 
-TOOLS = (PLANNER_TOOL, WORKER_TOOL)
+TOOLS = (PLANNER_TOOL, WORKER_TOOL, VERIFY_WORKER_TOOL)
 
 
 def _mcp_result(payload: Dict[str, Any]) -> Dict[str, Any]:
@@ -468,6 +634,18 @@ def _handle_request(message: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         if tool_name == WORKER_TOOL["name"]:
             allowed = {"cwd", "title", "model", "thinking", "permission_profile"}
             function = bootstrap_worker_task
+        elif tool_name == VERIFY_WORKER_TOOL["name"]:
+            allowed = {
+                "thread_id",
+                "cwd",
+                "model",
+                "thinking",
+                "configuration_mode",
+                "approval_policy",
+                "permission_profile",
+                "sandbox_mode",
+            }
+            function = verify_worker_task
         elif tool_name == PLANNER_TOOL["name"]:
             allowed = {
                 "cwd",

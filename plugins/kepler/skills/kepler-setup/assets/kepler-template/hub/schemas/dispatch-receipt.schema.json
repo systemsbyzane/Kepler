@@ -3,7 +3,7 @@
   "$id": "https://kepler.dev/schemas/dispatch-receipt.schema.json",
   "title": "Kepler DispatchReceipt",
   "type": "object",
-  "required": ["api_version", "kind", "task_id", "runtime_project_id", "project_path", "mode", "requested_model", "effective_model", "requested_thinking", "effective_thinking", "authorization_boundary"],
+  "required": ["api_version", "kind", "task_id", "runtime_project_id", "project_path", "mode", "requested_model", "effective_model", "requested_thinking", "effective_thinking", "authorization_boundary", "creation_method", "bootstrap_schema_version", "bootstrap_task_id", "configuration_verification_schema_version", "configuration_verified", "configuration_verified_task_id", "configuration_verified_before_prompt", "configuration_mode", "permission_profile", "sandbox_mode", "approval_policy"],
   "properties": {
     "api_version": {"const": "kepler.dev/v1"},
     "kind": {"const": "DispatchReceipt"},
@@ -17,6 +17,22 @@
     "requested_thinking": {"type": "string", "minLength": 1},
     "effective_thinking": {"type": "string", "minLength": 1},
     "authorization_boundary": {"type": "string", "minLength": 1},
+    "creation_method": {"const": "kepler-bootstrap-worker-task"},
+    "bootstrap_schema_version": {"const": "kepler.worker-task-bootstrap/v1"},
+    "bootstrap_task_id": {"type": "string", "minLength": 1},
+    "configuration_verification_schema_version": {"const": "kepler.worker-task-verification/v1"},
+    "configuration_verified": {"const": true},
+    "configuration_verified_task_id": {"type": "string", "minLength": 1},
+    "configuration_verified_before_prompt": {"const": true},
+    "configuration_mode": {"enum": ["global-config", "permission-profile"]},
+    "permission_profile": {"type": ["string", "null"]},
+    "sandbox_mode": {"type": ["string", "null"]},
+    "approval_policy": {
+      "oneOf": [
+        {"type": "string", "minLength": 1},
+        {"type": "object", "minProperties": 1}
+      ]
+    },
     "plan_id": {"type": "string"},
     "plan_revision": {"type": "integer", "minimum": 1},
     "unit_id": {"type": "string"}

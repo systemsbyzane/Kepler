@@ -1170,7 +1170,16 @@ def compare(args: argparse.Namespace) -> dict[str, Any]:
         ],
         {
             "exact_revision": ("exact Plan revision", "stale or ambiguous Plan revision"),
-            "worker_creation": ("task or thread creation/resume capability",),
+            "worker_creation": (
+                "Every new worker",
+                "bootstrap_worker_task",
+                "Never create a prompted worker",
+            ),
+            "configuration_verification": (
+                "verify_worker_task",
+                "kepler.worker-task-verification/v1",
+                "before sending any prompt",
+            ),
             "receipt_and_stop": ("return the receipts and stop without monitoring",),
             "worker_capability": ("initial relevant context, not an exclusive boundary",),
             "structured_result": ("validated WorkerResult",),
@@ -1182,7 +1191,7 @@ def compare(args: argparse.Namespace) -> dict[str, Any]:
             status="added",
             mandatory=True,
             scope="local",
-            mapping="ArchitectureMap, revisioned Plan, budgeted ContextPack, WorkerResult, and scoped memory replace only the useful agreement, readiness, handoff, and knowledge surfaces.",
+            mapping="ArchitectureMap, revisioned Plan, budgeted ContextPack, permission-attested dispatch, WorkerResult, and scoped memory replace only the useful agreement, readiness, handoff, and knowledge surfaces.",
             probe_name="schema, unit-suite, dispatch-boundary, and structured-file validation",
             passed=(
                 v1_schemas.issubset(candidate_schema_names)
