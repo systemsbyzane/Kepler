@@ -14,14 +14,22 @@ not a source monorepo and does not own or contain their repositories.
 - `/kepler review` creates its review-only Plan in the current task when that
   task is already verified as Sol with high reasoning. A new review Plan or
   revision does not create another control-project task.
-- `/kepler dispatch` uses Terra on `gpt-5.6-terra` for exact task creation or
-  resume. Every new implementation, review, research, or synthesis worker must
-  use the permission-preserving Kepler bootstrap and final-task verification;
-  direct prompted task creation is invalid. Terra records requested and
-  effective runtime and configuration evidence, returns the receipt, and stops
-  without monitoring.
-- `/kepler status` and `/kepler doctor` read structured state. They do not
-  synchronize or summarize worker transcripts.
+- `/kepler dispatch` stays in the current Sol control task and directly creates
+  or resumes exact Terra workers on `gpt-5.6-terra` in their owning saved
+  projects. It never creates an intermediary control-project dispatcher task.
+  Every new implementation, review, research, or synthesis worker must
+  use the permission-preserving Kepler bootstrap bound to the owning opaque
+  project ID and final-task verification; direct prompted task creation is
+  invalid. Before and after project-preserving prompt delivery, require both
+  app-server and live-list project identity plus the Local or Worktree path to
+  match the verified target. Collaboration-agent spawn, delegation, or
+  resume is invalid for repository workers. The control task records requested
+  and effective runtime, configuration, and association evidence, returns the
+  receipt, and ends the dispatch turn without monitoring.
+- `/kepler status` may read only the final response of a dispatched task,
+  validate and idempotently ingest its exact WorkerResult, and then report
+  structured state. It does not read progress, synchronize transcripts, or
+  create a planner. `/kepler doctor` remains read-only.
 
 Natural language supplies objectives and refinements. It never substitutes for
 an explicit `/kepler` state-changing command.
@@ -38,6 +46,11 @@ ContextPacks are useful initial context, never an exclusive boundary. Workers
 remain normal, directly accessible Codex tasks and may follow repository
 evidence beyond the initial paths.
 
+Each worker receives the serialized ContextPack once. Do not repeat the Plan,
+ArchitectureMap, objective, findings, or constraints in parallel prose. Reuse
+observed evidence unless state may have changed, and return only a compact
+structured WorkerResult under its declared budget.
+
 Bridges are optional advanced configuration. Ordinary setup and dispatch work
 without one. If a bridge is configured for a workspace, validate it strictly
 and fail closed on drift.
@@ -47,6 +60,12 @@ and fail closed on drift.
 Request a structured WorkerResult at completion or a material blocker. Ingest
 only relevant changes, discoveries, decisions, validation, blockers, handoffs,
 and artifact references. Do not copy transcripts into this project.
+
+Before Plan revision, review synthesis, or remediation planning, ingest every
+available completed WorkerResult and pass only result paths and unresolved
+decisions downstream. Artifact token estimates are not model-runtime telemetry;
+report actual runtime tokens as unavailable unless trustworthy runtime evidence
+is supplied.
 
 Implementation requests may authorize edits and local checks in the exact
 selected project. Commits, pushes, pull requests or comments, publication,

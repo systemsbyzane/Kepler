@@ -15,6 +15,7 @@ workspace:
   worker_results_root: hub/worker-results
   memory_root: hub/memory
   dispatch_receipts_root: hub/dispatch-receipts
+  cleanup_receipts_root: hub/cleanup-receipts
   report_root: hub/reports
   policy_root: docs
   local_registry: hub/state/repositories.yaml
@@ -80,10 +81,11 @@ routing:
     role: sol
     model: gpt-5.6-sol
     thinking: high
-  dispatcher_runtime:
+  worker_runtime:
     role: terra
     model: gpt-5.6-terra
     thinking: high
+  dispatch_execution_policy: current_control_task_only
   task_launch_policy: explicit_kepler_dispatch
   dispatch_receipt_policy: required
   post_dispatch_policy: return_receipt_without_monitoring

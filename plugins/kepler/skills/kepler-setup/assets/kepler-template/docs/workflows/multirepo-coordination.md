@@ -14,8 +14,9 @@ The hub thread owns:
 - ContextPacks, worker task IDs, and DispatchReceipts
 - cross-project sequencing, approvals, and validated WorkerResult ingestion
 
-Sol does not edit selected projects. Terra starts or resumes the exact workers,
-records receipts, and stops. `/kepler status` ingests validated WorkerResults;
+Sol does not edit selected projects. The same Sol control task starts or
+resumes the exact Terra workers directly in their owning projects, records
+receipts, and ends the dispatch turn. `/kepler status` ingests validated WorkerResults;
 worker transcripts are not synchronized.
 
 ## Thread Tool Flow

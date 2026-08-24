@@ -1178,9 +1178,13 @@ def compare(args: argparse.Namespace) -> dict[str, Any]:
             "configuration_verification": (
                 "verify_worker_task",
                 "kepler.worker-task-verification/v1",
+                "expectedRuntimeProjectId",
+                "actualRuntimeProjectId",
                 "before sending any prompt",
             ),
-            "receipt_and_stop": ("return the receipts and stop without monitoring",),
+            "receipt_and_stop": (
+                "return the receipts and end the dispatch turn without monitoring",
+            ),
             "worker_capability": ("initial relevant context, not an exclusive boundary",),
             "structured_result": ("validated WorkerResult",),
         },
@@ -1657,7 +1661,7 @@ def compare(args: argparse.Namespace) -> dict[str, Any]:
             ),
             "owner_boundary": (
                 "inspect its code, schema, or declared configuration read-only",
-                "terra dispatches approved worker units",
+                "the same sol control task dispatches approved terra worker units directly into their owning projects",
             ),
             "state_distinction": (
                 "intended schema and configuration in source",
@@ -2330,6 +2334,12 @@ def compare(args: argparse.Namespace) -> dict[str, Any]:
         setup_result = by_name.get("installed_project_first_setup_and_exact_identity", {})
         model_result = by_name.get("installed_sol_terra_model_binding", {})
         dispatch_result = by_name.get("installed_worker_create_resume_result_and_no_monitoring", {})
+        verified_runtime_project_ids = [
+            dispatch_result.get("bootstrap_expected_runtime_project_id"),
+            dispatch_result.get("bootstrap_actual_runtime_project_id"),
+            dispatch_result.get("pre_prompt_verified_runtime_project_id"),
+            dispatch_result.get("post_delivery_verified_runtime_project_id"),
+        ]
         runtime_assertions_pass = (
             required_runtime.issubset(by_name)
             and all(by_name[name].get("status") == "passed" for name in required_runtime)
@@ -2346,6 +2356,20 @@ def compare(args: argparse.Namespace) -> dict[str, Any]:
             and dispatch_result.get("create_task_id")
             == dispatch_result.get("resume_task_id")
             and dispatch_result.get("runtime_project_id_used") is True
+            and all(
+                isinstance(project_id, str) and bool(project_id)
+                for project_id in verified_runtime_project_ids
+            )
+            and len(set(verified_runtime_project_ids)) == 1
+            and dispatch_result.get("post_delivery_verified_empty") is False
+            and dispatch_result.get("dispatch_owner_task_id")
+            == dispatch_result.get("control_task_id")
+            and dispatch_result.get("intermediary_dispatch_task_created") is False
+            and dispatch_result.get("prompt_delivery_method")
+            == "codex-thread-message"
+            and dispatch_result.get("collaboration_agent_routing") is False
+            and dispatch_result.get("project_association_before")
+            == dispatch_result.get("project_association_after")
             and dispatch_result.get("monitoring_after_receipt") is False
             and dispatch_result.get("worker_result_ingested") is True
             and dispatch_result.get("transcript_sync") is False
@@ -2370,7 +2394,7 @@ def compare(args: argparse.Namespace) -> dict[str, Any]:
             status="matched" if runtime_pass else "unresolved",
             mandatory=True,
             scope="runtime",
-            mapping="Installed project-first setup must select existing saved projects by opaque ID and exact path; Sol/Terra model identities, create/resume receipts, WorkerResult ingestion, and receipt-stop must be observed directly.",
+            mapping="Installed project-first setup must select existing saved projects by opaque ID and exact path; one Sol control task must dispatch Terra workers directly; worker project association, create/resume receipts, WorkerResult ingestion, and receipt-stop must be observed directly.",
             probe_name="installed-plugin fresh-task acceptance",
             passed=runtime_pass,
             evidence=runtime_evidence,

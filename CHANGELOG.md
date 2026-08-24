@@ -1,5 +1,19 @@
 # Changelog
 
+## 1.1.1 - Unreleased
+
+- Kept planning, dispatch, status, and review in one Sol control task.
+- Bound worker creation to the owning opaque runtime project ID and fail closed
+  when app-server reports a different project after creation, handoff, prompt
+  delivery, or continuation.
+- Required DispatchReceipts to record actual project identity from bootstrap,
+  pre-prompt verification, post-delivery verification, and the live task list.
+- Reduced duplicate ContextPack and WorkerResult context.
+- Added optional Herdr attachment for the same exact Codex worker task, keeping
+  opaque project routing and structured status unchanged.
+- Added receipt-driven cleanup that archives completed workers and removes only
+  clean, inactive, already-merged Worktrees while preserving branches.
+
 ## 1.0.0 - Unreleased
 
 - Renamed Flightdeck to Kepler across repository, plugin, skills, generated control project, contracts, and docs.

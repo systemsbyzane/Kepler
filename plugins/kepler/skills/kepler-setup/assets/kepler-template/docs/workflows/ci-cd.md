@@ -10,8 +10,9 @@ environment. Correlate current provider evidence with the workflow definition
 at that exact revision; the latest run and current checkout may differ.
 
 Sol may inspect the selected project's pipeline source and provider evidence
-read-only while preparing the Plan. Terra dispatches an approved unit and
-returns the receipt without monitoring.
+read-only while preparing the Plan. The same Sol control task dispatches an
+approved Terra worker directly into its owning project and returns the receipt
+without monitoring.
 
 ## Adaptive action
 

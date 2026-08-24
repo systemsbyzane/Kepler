@@ -6,13 +6,23 @@
       "env_vars": [
         "CODEX_CLI_PATH",
         "KEPLER_CODEX_CLI_PATH",
+        "HERDR_ENV",
+        "HERDR_SESSION",
+        "HERDR_SOCKET_PATH",
+        "HERDR_CONFIG_PATH",
+        "HERDR_WORKSPACE_ID",
+        "HERDR_TAB_ID",
+        "HERDR_PANE_ID",
+        "HERDR_BIN_PATH",
+        "HERDR_CLI_PATH",
+        "KEPLER_HERDR_CLI_PATH",
         "HOME",
         "USERPROFILE",
         "LOCALAPPDATA",
         "PATH"
       ],
       "startup_timeout_sec": 10,
-      "tool_timeout_sec": 30
+      "tool_timeout_sec": 60
     }
   }
 }

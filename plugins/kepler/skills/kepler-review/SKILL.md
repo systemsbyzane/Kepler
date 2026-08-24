@@ -19,6 +19,10 @@ required, verify the final task before its prompt, and fail closed on any
 configuration mismatch. Review-only authorization does not permit direct
 prompted task creation or a weaker sandbox.
 
+Before review synthesis or remediation planning, idempotently ingest every
+available review WorkerResult and reference the structured artifacts. Do not
+copy review transcripts or paste full findings into another planner prompt.
+
 ## Resolve the review target
 
 1. Identify the artifact or Git comparison being reviewed and the question the
@@ -33,8 +37,9 @@ prompted task creation or a weaker sandbox.
    bundled `references/review-method.md`; do not claim the Hub-local workflow
    was read. Review Hub-owned coordination material in place. For a
    repository-owned target, resolve every owner. Sol may inspect selected
-   project evidence read-only while preparing the review Plan; Terra dispatches
-   approved review units and returns the receipt without monitoring. If route
+   project evidence read-only while preparing the review Plan; the same Sol
+   control task directly dispatches approved Terra review workers into their
+   owning projects and returns the receipt without monitoring. If route
    planning is unavailable, use only the checker's manual exact-path handoff
    after normal verification fails.
 3. In an owning repository, read applicable instructions, record branch, SHA,

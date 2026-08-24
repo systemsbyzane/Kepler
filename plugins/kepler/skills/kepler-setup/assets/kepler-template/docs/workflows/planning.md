@@ -14,6 +14,10 @@ Use the confirmed ArchitectureMap, live project identity, relevant repository
 instructions, and scoped memory. Mark unavailable evidence explicitly; do not
 invent it or dispatch merely to avoid read-only inspection.
 
+Before revising a Plan or preparing synthesis, ingest every available completed
+WorkerResult. Pass result artifact paths and unresolved decisions to Sol rather
+than duplicating findings, prior prompts, repository contents, or transcripts.
+
 ## Right-sized output
 
 - Small work: outcome, short ordered plan, and validation.

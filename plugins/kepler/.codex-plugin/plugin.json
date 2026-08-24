@@ -1,7 +1,7 @@
 {
   "name": "kepler",
   "version": "1.1.1",
-  "description": "Plan and dispatch context-aware engineering work across existing Codex projects, with structured results and scoped memory.",
+  "description": "Plan and dispatch context-aware engineering work across existing Codex projects, with structured results, scoped memory, and optional Herdr worker visibility.",
   "author": {
     "name": "Kepler Maintainers",
     "url": "https://github.com/systemsbyzane/kepler"
@@ -13,6 +13,7 @@
     "coordination",
     "multi-repository",
     "project-routing",
+    "herdr",
     "workflow"
   ],
   "skills": "./skills/",
@@ -20,7 +21,7 @@
   "interface": {
     "displayName": "Kepler",
     "shortDescription": "Portable multi-project engineering coordination",
-    "longDescription": "Creates a Kepler control project with a confirmed architecture map, revisioned Plans, budgeted ContextPacks, exact one-shot worker dispatch, structured WorkerResults, scoped memory, read-only Doctor checks, and focused engineering workflows while keeping repositories and workers in normal Codex projects.",
+    "longDescription": "Creates a Kepler control project with a confirmed architecture map, revisioned Plans, budgeted ContextPacks, exact one-shot worker dispatch, structured WorkerResults, scoped memory, optional Herdr attachment and safe cleanup, read-only Doctor checks, and focused engineering workflows while keeping repositories and workers in normal Codex projects.",
     "developerName": "Kepler Maintainers",
     "category": "Developer Tools",
     "websiteURL": "https://github.com/systemsbyzane/kepler",

@@ -15,7 +15,7 @@ ContextPacks, exact dispatch receipts, structured WorkerResults, and scoped
 memory. Repositories stay where they are. Workers remain ordinary,
 full-capability Codex tasks.
 
-> Sol plans. Terra dispatches. Codex executes. Kepler remembers.
+> Sol coordinates. Terra workers execute. Kepler remembers.
 
 ## The control loop
 
@@ -32,8 +32,8 @@ not a copied transcript.
 
 | Component | Role | Hard boundary |
 |---|---|---|
-| **Sol** | Inspects evidence, maps dependencies, and revises the Plan | Does not implement or dispatch |
-| **Terra** | Verifies the exact project and Plan revision, then launches ready work | Returns the receipt and stops |
+| **Sol** | Inspects evidence, maps dependencies, revises the Plan, dispatches exact workers, and collects results in one control task | Never implements selected-project work |
+| **Terra worker** | Executes one ready unit in its exact owning Codex project | Returns a structured result; never becomes a control-project task |
 | **Plan** | Records the objective, constraints, units, dependencies, and readiness | Remains lightweight; it is not a workflow engine |
 | **ContextPack** | Gives one worker a small, auditable starting context | Never limits what the worker may inspect |
 | **WorkerResult** | Returns changes, discoveries, decisions, failed attempts, and validation | Never copies the full worker transcript |
@@ -42,9 +42,15 @@ not a copied transcript.
 ## Flight rules
 
 - Exact project and path verification comes before dispatch.
+- The current control task dispatches directly; Kepler never creates an
+  intermediary control-project dispatcher task.
+- Worker creation is bound to the owning opaque project ID, which is verified
+  through app-server and the live task list before and after prompt delivery.
 - Material Plan changes create a new visible revision.
 - Workers stay directly accessible and fully capable.
 - Dispatch ends with a receipt; Kepler does not monitor in the background.
+- Inside Herdr, a verified Codex worker can be attached to an owned workspace
+  without changing its task, project identity, configuration, or result path.
 - Commits, remote writes, deployments, publication, and other consequential
   actions retain explicit approval gates.
 - Kepler is not a daemon, monorepo manager, transcript synchronizer, Mission or
@@ -71,11 +77,26 @@ edit connected repositories.
 
 /kepler dispatch
 /kepler status
+/kepler cleanup
 ```
 
 Refine an active Plan in ordinary conversation. Open any worker directly when
 useful. Return to the Kepler control project for cross-project status and the
 next ready dispatch.
+
+## Optional Herdr execution view
+
+Run the Kepler control agent as Codex inside a Herdr workspace to keep one
+persistent control surface and see repository workers as normal Herdr agents.
+Kepler still creates and verifies each worker through Codex first; Herdr resumes
+that same task in its exact repository or Worktree. ContextPacks,
+DispatchReceipts, WorkerResults, dependencies, and `/kepler status` behave the
+same. After terminal results are ingested, `/kepler cleanup` closes only
+receipt-owned worker workspaces, archives their Codex tasks, and removes only
+clean, inactive, already-merged Worktrees while preserving branches.
+
+Herdr is optional. Outside a Herdr-managed control agent, Kepler continues to
+use ordinary directly accessible Codex workers.
 
 ## Navigation
 

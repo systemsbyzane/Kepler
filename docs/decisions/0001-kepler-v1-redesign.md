@@ -15,8 +15,9 @@ context loss between workers, or the lack of compact cross-worker handoffs.
 Kepler v1 is a clean-break redesign built on that safety baseline. Its durable
 state is limited to a user-confirmed ArchitectureMap, lightweight revisioned
 Plans, budgeted ContextPacks, validated WorkerResults, dispatch receipts, and
-typed scoped memory. Sol plans, Terra dispatches, and ordinary Codex tasks
-execute. No compatibility alias is provided for the old plugin ID or command.
+typed scoped memory. One Sol control task plans, dispatches, ingests status, and
+coordinates the next wave; Terra workers execute in their owning Codex
+projects. No compatibility alias is provided for the old plugin ID or command.
 
 The Plan stores agreement, dependency order, readiness, and evidence. It is
 not a scheduler, event bus, supervisor, or renamed Mission/Operation model.
@@ -30,11 +31,15 @@ replace workload directories, clone roots, and pseudo-projects. A bridge is an
 optional advanced attachment, not a setup or dispatch prerequisite.
 
 The installed Codex task surface supports explicit runtime selection. Sol is
-mechanically requested as `gpt-5.6-sol` for planning and Terra as
-`gpt-5.6-terra` for dispatch. Dispatch receipts record requested and effective
-model and reasoning values; a mismatch is a failed runtime acceptance check.
+mechanically requested as `gpt-5.6-sol` for the control task and Terra as
+`gpt-5.6-terra` for repository workers. Dispatch receipts record requested and
+effective model, reasoning, control-task ownership, and before/after worker
+project association; a mismatch is a failed runtime acceptance check.
 Natural language supplies objectives and Plan refinements, while `/kepler`
 commands own setup, persistence, dispatch, review, status, and Doctor actions.
+An optional Herdr attachment may resume the same verified Codex worker in a
+terminal workspace. It does not replace app-server identity, prompt delivery,
+DispatchReceipts, or WorkerResults. Cleanup is explicit and receipt-scoped.
 
 ## Consequences
 
@@ -45,5 +50,7 @@ commands own setup, persistence, dispatch, review, status, and Doctor actions.
   boundaries.
 - Installed-plugin dispatch and upgrade acceptance require fresh Codex tasks;
   source validators cannot substitute for that evidence.
+- Herdr task-resume compatibility and cleanup require installed, inside-Herdr
+  acceptance; local fakes prove only the adapter contract.
 - The generated control project contains no default development, charts,
   patching, research, environments, or compliance workload directories.

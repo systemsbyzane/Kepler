@@ -2,7 +2,7 @@
   "schema_version": "kepler.hub-compatibility/v1",
   "schema": "hub/schemas/hub-compatibility.schema.json",
   "product": "kepler",
-  "template_version": "1.1.0",
+  "template_version": "1.1.1",
   "capabilities": {
     "kepler.command.doctor.v1": {
       "kind": "command",
@@ -32,6 +32,44 @@
       ],
       "fallback": {
         "mode": "compatibility_report_only"
+      }
+    },
+    "kepler.command.status-token-efficiency.v1": {
+      "kind": "command",
+      "description": "Plan status with ContextPack and WorkerResult artifact token estimates that explicitly leave runtime usage unavailable.",
+      "probe": {
+        "help_contains": "bin/kepler status "
+      },
+      "managed_paths": [
+        "bin/kepler",
+        "lib/kepler/cli.rb",
+        "lib/kepler/context_compiler.rb",
+        "lib/kepler/contracts.rb",
+        "lib/kepler/plan_store.rb"
+      ],
+      "fallback": {
+        "mode": "compatibility_report_only"
+      }
+    },
+    "kepler.command.control-task-dispatch.v1": {
+      "kind": "command",
+      "description": "Current-control-task dispatch with no intermediary dispatcher, app-server creation bound to the owning opaque project ID, and exact association before and after prompt delivery.",
+      "probe": {
+        "help_contains": "bin/kepler route plan "
+      },
+      "managed_paths": [
+        "bin/kepler",
+        "kepler.yaml",
+        "hub/schemas/kepler.schema.json",
+        "hub/schemas/dispatch-receipt.schema.json",
+        "lib/kepler/contracts.rb",
+        "lib/kepler/doctor.rb",
+        "lib/kepler/plan_store.rb",
+        "lib/kepler/route_planner.rb"
+      ],
+      "fallback": {
+        "mode": "bundled_reference",
+        "reference": "skills/kepler/references/dispatch.md"
       }
     },
     "kepler.command.route-plan.v1": {

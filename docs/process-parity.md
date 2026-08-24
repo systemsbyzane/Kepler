@@ -62,7 +62,8 @@ and outside plugin, template, and generated-control-project content.
 | Design history | Neutral coordination-layer and compliance workbench plans/specifications under `docs/superpowers/` |
 | Legacy task and workflow contracts | Explicit clean-break migration evidence; Kepler v1 uses Plan, ContextPack, DispatchReceipt, and WorkerResult contracts instead |
 | Project onboarding | Selection from the live saved-project catalog by opaque runtime ID and exact normalized path; no repository scan or selected-project mutation |
-| Project identity and dispatch | Exact normalized path verification, separate logical/runtime IDs, search/resume-before-create, receipt, and no monitoring |
+| Project identity and dispatch | Exact normalized path verification, separate logical/runtime IDs, search/resume-before-create, optional same-task Herdr attachment, receipt, and no monitoring |
+| Worker cleanup | Exact receipt ownership, idle-state verification, task archival, branch preservation, and clean already-merged Worktree removal |
 | Repository bridges | Optional advanced reference, materialized, and repo-native modes; absent by default; configured drift fails closed |
 | Doctor and coordination | Stable finding codes, no-fetch repository state, ArchitectureMap/Plan contract checks, bridge integrity, sidecar checks, and disabled automation policy |
 | Automation patterns | Disabled YAML specifications plus a separate approval-gated real-schedule method |
@@ -115,7 +116,8 @@ creation/resume behavior, or an installed plugin update.
 Installed runtime evidence remains unresolved unless a fresh task records the
 exact plugin version, current candidate root, a preserved synthetic control
 project, at least two exact-path project matches, distinct logical and opaque
-runtime IDs, requested/effective Sol and Terra models, optional-bridge behavior,
+runtime IDs, requested/effective Sol control-task and Terra worker models,
+no intermediary dispatcher, stable owning-project association, optional-bridge behavior,
 task create/resume identity, WorkerResult ingestion, and receipt-stop without
 monitoring. Stale or cross-plugin evidence must fail.
 Installed upgrade acceptance separately requires explicit authorization,

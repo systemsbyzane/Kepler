@@ -9,8 +9,8 @@ and blast radius.
 Review code, configuration, manifests, artifacts, and repository evidence in
 the owning project. Review Hub-owned coordination plans or workflows in place.
 Sol may inspect repository-owned evidence read-only while preparing the review
-Plan. Terra dispatches any approved worker unit and returns the receipt without
-monitoring.
+Plan. The same Sol control task dispatches any approved Terra review worker
+directly into its owning project and returns the receipt without monitoring.
 
 When the current control task is already verified as Sol with high reasoning,
 create and persist the review Plan there. Do not create another control task

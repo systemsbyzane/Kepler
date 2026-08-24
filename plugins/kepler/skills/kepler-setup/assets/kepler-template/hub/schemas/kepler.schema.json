@@ -20,7 +20,7 @@
     },
     "workspace": {
       "type": "object",
-      "required": ["root", "coordination_project_key", "architecture_map", "plans_root", "context_packs_root", "worker_results_root", "memory_root", "dispatch_receipts_root", "report_root", "policy_root", "local_registry", "bridge_registry", "repository_declarations", "project_registry", "bridge_setup_receipt", "implementation_policy", "runtime_state_policy"],
+      "required": ["root", "coordination_project_key", "architecture_map", "plans_root", "context_packs_root", "worker_results_root", "memory_root", "dispatch_receipts_root", "cleanup_receipts_root", "report_root", "policy_root", "local_registry", "bridge_registry", "repository_declarations", "project_registry", "bridge_setup_receipt", "implementation_policy", "runtime_state_policy"],
       "properties": {
         "root": {"type": "string", "pattern": "^/"},
         "coordination_project_key": {"const": "kepler"},
@@ -43,11 +43,12 @@
     },
     "routing": {
       "type": "object",
-      "required": ["default_coordination_project_key", "planner_runtime", "dispatcher_runtime", "task_launch_policy", "dispatch_receipt_policy", "post_dispatch_policy", "monitoring_policy", "existing_task_policy", "project_registration_policy", "bridge_policy", "mode_defaults"],
+      "required": ["default_coordination_project_key", "planner_runtime", "worker_runtime", "dispatch_execution_policy", "task_launch_policy", "dispatch_receipt_policy", "post_dispatch_policy", "monitoring_policy", "existing_task_policy", "project_registration_policy", "bridge_policy", "mode_defaults"],
       "properties": {
         "default_coordination_project_key": {"const": "kepler"},
         "planner_runtime": {"$ref": "#/$defs/runtime"},
-        "dispatcher_runtime": {"$ref": "#/$defs/runtime"},
+        "worker_runtime": {"$ref": "#/$defs/runtime"},
+        "dispatch_execution_policy": {"const": "current_control_task_only"},
         "task_launch_policy": {"const": "explicit_kepler_dispatch"},
         "dispatch_receipt_policy": {"const": "required"},
         "post_dispatch_policy": {"const": "return_receipt_without_monitoring"},

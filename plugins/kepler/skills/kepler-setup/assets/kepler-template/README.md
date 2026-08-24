@@ -21,10 +21,13 @@ configuration and are not required for setup or dispatch.
 
 ## Runtime roles
 
-- Sol uses `gpt-5.6-sol` for read-only planning inspection and Plan revisions.
-- Terra uses `gpt-5.6-terra` for exact dispatch, returns a receipt, and stops.
-- Workers use normal Codex project behavior and receive non-exclusive
-  ContextPacks.
+- One Sol control task uses `gpt-5.6-sol` for planning, exact dispatch, status,
+  review, and next-wave coordination without implementing repository work.
+- Terra workers use `gpt-5.6-terra` in their exact owning saved projects and
+  receive non-exclusive ContextPacks.
+- Dispatch creates no intermediary control-project task, binds worker creation
+  to the owning opaque project ID, verifies it through app-server and the live
+  lists before and after delivery, returns receipts, and ends without monitoring.
 
 Dispatch receipts record requested and effective runtime evidence. Worker
 transcripts are never copied into this project.

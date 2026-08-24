@@ -78,6 +78,10 @@ module Kepler
       root_path(workspace.fetch("dispatch_receipts_root", "hub/dispatch-receipts"), label: "dispatch receipts root")
     end
 
+    def cleanup_receipt_dir
+      root_path(workspace.fetch("cleanup_receipts_root", "hub/cleanup-receipts"), label: "cleanup receipts root")
+    end
+
     def report_dir
       root_path(workspace.fetch("report_root", "hub/reports"), label: "report root")
     end

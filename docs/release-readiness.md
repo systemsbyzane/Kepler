@@ -16,11 +16,19 @@ A release is ready only when every mandatory item below is evidenced.
   Explicitly configured bridges fail closed on missing or drifting state.
 - Sol uses requested/effective `gpt-5.6-sol` evidence and may inspect selected
   projects read-only while planning.
-- Terra uses requested/effective `gpt-5.6-terra` evidence, dispatches the exact
-  current Plan revision and project, returns the receipt, and stops.
+- The current Sol task dispatches the exact current Plan revision directly and
+  creates no intermediary control-project task. Terra workers use
+  requested/effective `gpt-5.6-terra` evidence in their owning projects.
+- Every worker keeps the exact owning saved-project ID and Local or Worktree
+  path before and after project-preserving prompt delivery; collaboration-agent
+  routing is invalid.
 - Workers are ordinary, directly accessible Codex tasks. ContextPacks are
   provenance-bearing initial context, never an exclusive boundary.
 - WorkerResults, not transcripts or task-state inference, advance readiness.
+- Optional Herdr attachment resumes the same verified Codex task; it never
+  substitutes a terminal-created worker or treats Herdr state as completion.
+- Cleanup is explicit, receipt-owned, branch-preserving, and fail-closed for
+  active, dirty, unmerged, missing, or mismatched resources.
 - Natural language supplies objectives and Plan refinements. Setup, dispatch,
   review, status, and Doctor state changes use explicit `/kepler` commands.
 
@@ -40,6 +48,8 @@ A release is ready only when every mandatory item below is evidenced.
 
 Local gates must distinguish observed runtime behavior from source assertions.
 They cannot prove installed skill discovery, model selection, or task dispatch.
+They also cannot prove that an app-server task resumes interactively inside a
+live Herdr session or that live attachment cleanup reaches the intended session.
 
 ## Installed clean-profile gates
 
@@ -47,9 +57,11 @@ After explicit installation authorization, follow the setup skill's
 `references/installed-acceptance.md` in a clean profile and fresh tasks.
 Require verified public-Git and local-development installation commands, exact
 plugin version, two selected existing projects, confirmed ArchitectureMap,
-Doctor, Plan revision/refinement, stale revision rejection, Sol and Terra
-model evidence, create and resume receipts, direct worker access, structured
+Doctor, Plan revision/refinement, stale revision rejection, Sol control-task and
+Terra worker model evidence, no intermediary dispatcher, owning-project
+preservation, create and resume receipts, direct worker access, structured
 WorkerResult ingestion, next-unit readiness, no transcript sync, receipt-stop,
+inside-Herdr attachment to the same task, safe cleanup refusal and success,
 and before/after Git status.
 
 A missing exact identity, model value, runtime receipt, or fresh-task result is

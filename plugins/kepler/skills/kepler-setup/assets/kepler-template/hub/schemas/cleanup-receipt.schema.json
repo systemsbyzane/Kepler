@@ -1,0 +1,50 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kepler.dev/schemas/cleanup-receipt.schema.json",
+  "title": "Kepler CleanupReceipt",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["api_version", "kind", "schema_version", "plan_id", "plan_revision", "unit_id", "task_id", "runtime_project_id", "project_path", "worker_cwd", "mode", "herdr_attachment", "herdr_workspace_closed", "task_archived", "remove_worktree_requested", "worktree_removed", "branch_preserved"],
+  "properties": {
+    "api_version": {"const": "kepler.dev/v1"},
+    "kind": {"const": "CleanupReceipt"},
+    "schema_version": {"const": "kepler.worker-cleanup/v1"},
+    "plan_id": {"type": "string", "minLength": 1},
+    "plan_revision": {"type": "integer", "minimum": 1},
+    "unit_id": {"type": "string", "minLength": 1},
+    "task_id": {"type": "string", "minLength": 1},
+    "runtime_project_id": {"type": "string", "minLength": 1},
+    "project_path": {"type": "string", "minLength": 1},
+    "worker_cwd": {"type": "string", "minLength": 1},
+    "mode": {"type": "string", "minLength": 1},
+    "herdr_attachment": {"$ref": "#/$defs/herdrAttachment"},
+    "herdr_workspace_closed": {"const": true},
+    "task_archived": {"const": true},
+    "remove_worktree_requested": {"type": "boolean"},
+    "worktree_removed": {"type": "boolean"},
+    "branch_preserved": {"const": true}
+  },
+  "$defs": {
+    "herdrAttachment": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schema_version", "herdr_version", "protocol", "workspace_id", "tab_id", "pane_id", "agent_name", "agent_kind", "resumed_task_id", "worker_cwd", "workspace_owned", "tab_owned", "pane_owned", "agent_owned"],
+      "properties": {
+        "schema_version": {"const": "kepler.herdr-attachment/v1"},
+        "herdr_version": {"type": "string", "minLength": 1},
+        "protocol": {"type": "integer", "minimum": 19},
+        "workspace_id": {"type": "string", "minLength": 1},
+        "tab_id": {"type": "string", "minLength": 1},
+        "pane_id": {"type": "string", "minLength": 1},
+        "agent_name": {"type": "string", "minLength": 1},
+        "agent_kind": {"const": "codex"},
+        "resumed_task_id": {"type": "string", "minLength": 1},
+        "worker_cwd": {"type": "string", "minLength": 1},
+        "workspace_owned": {"const": true},
+        "tab_owned": {"const": true},
+        "pane_owned": {"const": true},
+        "agent_owned": {"const": true}
+      }
+    }
+  }
+}

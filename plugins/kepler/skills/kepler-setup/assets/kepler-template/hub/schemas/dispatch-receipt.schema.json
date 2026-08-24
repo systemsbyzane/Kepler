@@ -3,7 +3,7 @@
   "$id": "https://kepler.dev/schemas/dispatch-receipt.schema.json",
   "title": "Kepler DispatchReceipt",
   "type": "object",
-  "required": ["api_version", "kind", "task_id", "runtime_project_id", "project_path", "mode", "requested_model", "effective_model", "requested_thinking", "effective_thinking", "authorization_boundary", "creation_method", "bootstrap_schema_version", "bootstrap_task_id", "configuration_verification_schema_version", "configuration_verified", "configuration_verified_task_id", "configuration_verified_before_prompt", "configuration_mode", "permission_profile", "sandbox_mode", "approval_policy"],
+  "required": ["api_version", "kind", "task_id", "runtime_project_id", "project_path", "mode", "requested_model", "effective_model", "requested_thinking", "effective_thinking", "authorization_boundary", "creation_method", "bootstrap_schema_version", "bootstrap_task_id", "bootstrap_expected_runtime_project_id", "bootstrap_actual_runtime_project_id", "configuration_verification_schema_version", "configuration_verified", "configuration_verified_task_id", "configuration_verified_before_prompt", "configuration_verified_runtime_project_id", "post_delivery_project_verification_schema_version", "post_delivery_project_verified", "post_delivery_project_verified_task_id", "post_delivery_verified_runtime_project_id", "post_delivery_verified_empty", "configuration_mode", "permission_profile", "sandbox_mode", "approval_policy", "context_pack_id", "context_pack_estimated_tokens", "context_pack_token_budget", "dispatch_execution", "intermediary_dispatch_task_created", "dispatch_owner_task_id", "dispatch_owner_project_path", "prompt_delivery_method", "project_association_verification_source", "project_association_before", "project_association_after"],
   "properties": {
     "api_version": {"const": "kepler.dev/v1"},
     "kind": {"const": "DispatchReceipt"},
@@ -20,10 +20,18 @@
     "creation_method": {"const": "kepler-bootstrap-worker-task"},
     "bootstrap_schema_version": {"const": "kepler.worker-task-bootstrap/v1"},
     "bootstrap_task_id": {"type": "string", "minLength": 1},
+    "bootstrap_expected_runtime_project_id": {"type": "string", "minLength": 1},
+    "bootstrap_actual_runtime_project_id": {"type": "string", "minLength": 1},
     "configuration_verification_schema_version": {"const": "kepler.worker-task-verification/v1"},
     "configuration_verified": {"const": true},
     "configuration_verified_task_id": {"type": "string", "minLength": 1},
     "configuration_verified_before_prompt": {"const": true},
+    "configuration_verified_runtime_project_id": {"type": "string", "minLength": 1},
+    "post_delivery_project_verification_schema_version": {"const": "kepler.worker-task-verification/v1"},
+    "post_delivery_project_verified": {"const": true},
+    "post_delivery_project_verified_task_id": {"type": "string", "minLength": 1},
+    "post_delivery_verified_runtime_project_id": {"type": "string", "minLength": 1},
+    "post_delivery_verified_empty": {"const": false},
     "configuration_mode": {"enum": ["global-config", "permission-profile"]},
     "permission_profile": {"type": ["string", "null"]},
     "sandbox_mode": {"type": ["string", "null"]},
@@ -33,8 +41,53 @@
         {"type": "object", "minProperties": 1}
       ]
     },
+    "context_pack_id": {"type": "string", "minLength": 1},
+    "context_pack_estimated_tokens": {"type": "integer", "minimum": 1},
+    "context_pack_token_budget": {"type": "integer", "minimum": 1},
+    "dispatch_execution": {"const": "current-control-task"},
+    "intermediary_dispatch_task_created": {"const": false},
+    "dispatch_owner_task_id": {"type": "string", "minLength": 1},
+    "dispatch_owner_project_path": {"type": "string", "minLength": 1},
+    "prompt_delivery_method": {"const": "codex-thread-message"},
+    "project_association_verification_source": {"const": "live-project-and-task-list"},
+    "project_association_before": {"$ref": "#/$defs/projectAssociation"},
+    "project_association_after": {"$ref": "#/$defs/projectAssociation"},
+    "herdr_attachment": {"$ref": "#/$defs/herdrAttachment"},
     "plan_id": {"type": "string"},
     "plan_revision": {"type": "integer", "minimum": 1},
     "unit_id": {"type": "string"}
+  },
+  "$defs": {
+    "projectAssociation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["runtime_project_id", "project_path", "task_cwd"],
+      "properties": {
+        "runtime_project_id": {"type": "string", "minLength": 1},
+        "project_path": {"type": "string", "minLength": 1},
+        "task_cwd": {"type": "string", "minLength": 1}
+      }
+    },
+    "herdrAttachment": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schema_version", "herdr_version", "protocol", "workspace_id", "tab_id", "pane_id", "agent_name", "agent_kind", "resumed_task_id", "worker_cwd", "workspace_owned", "tab_owned", "pane_owned", "agent_owned"],
+      "properties": {
+        "schema_version": {"const": "kepler.herdr-attachment/v1"},
+        "herdr_version": {"type": "string", "minLength": 1},
+        "protocol": {"type": "integer", "minimum": 19},
+        "workspace_id": {"type": "string", "minLength": 1},
+        "tab_id": {"type": "string", "minLength": 1},
+        "pane_id": {"type": "string", "minLength": 1},
+        "agent_name": {"type": "string", "minLength": 1},
+        "agent_kind": {"const": "codex"},
+        "resumed_task_id": {"type": "string", "minLength": 1},
+        "worker_cwd": {"type": "string", "minLength": 1},
+        "workspace_owned": {"const": true},
+        "tab_owned": {"const": true},
+        "pane_owned": {"const": true},
+        "agent_owned": {"const": true}
+      }
+    }
   }
 }

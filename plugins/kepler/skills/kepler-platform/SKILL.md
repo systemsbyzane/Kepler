@@ -16,8 +16,9 @@ an unnecessary infrastructure checklist.
    runtime.
 2. In a Kepler control project, read `AGENTS.md`,
    `docs/workflows/platform.md`, and the ArchitectureMap. Sol may inspect
-   selected-project source read-only while planning; Terra dispatches approved
-   implementation or runtime-validation units.
+   selected-project source read-only while planning; the same Sol control task
+   dispatches approved Terra implementation or runtime-validation workers
+   directly into their owning projects.
 3. Perform source edits in the owning repository. Use `$kepler-charts` for
    Helm or Kubernetes manifest mechanics.
 4. Perform durable live inspection or validation in the matching environment

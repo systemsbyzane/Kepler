@@ -100,6 +100,14 @@ module Kepler
       policy = mapping!(value["worker_policy"], "ContextPack worker_policy")
       raise ValidationError, "ContextPack must preserve worker capability" unless policy["initial_context_not_boundary"] == true
       raise ValidationError, "ContextPack must request a WorkerResult" unless policy["return_worker_result"] == true
+      raise ValidationError, "ContextPack must request a structured-only WorkerResult" unless policy["structured_result_only"] == true
+      raise ValidationError, "ContextPack must prohibit repeated context" unless policy["avoid_context_repetition"] == true
+      begin
+        result_budget = Integer(policy["result_token_budget"])
+      rescue ArgumentError, TypeError
+        raise ValidationError, "ContextPack result token budget must be an integer"
+      end
+      raise ValidationError, "ContextPack result token budget must be positive" unless result_budget.positive?
       value
     end
 
@@ -125,10 +133,10 @@ module Kepler
 
     def dispatch_receipt!(value)
       document!(value, "DispatchReceipt")
-      %w[task_id runtime_project_id project_path mode requested_model effective_model requested_thinking effective_thinking authorization_boundary creation_method bootstrap_schema_version bootstrap_task_id configuration_verification_schema_version configuration_verified configuration_verified_task_id configuration_verified_before_prompt configuration_mode approval_policy].each do |key|
+      %w[task_id runtime_project_id project_path mode requested_model effective_model requested_thinking effective_thinking authorization_boundary creation_method bootstrap_schema_version bootstrap_task_id bootstrap_expected_runtime_project_id bootstrap_actual_runtime_project_id configuration_verification_schema_version configuration_verified configuration_verified_task_id configuration_verified_before_prompt configuration_verified_runtime_project_id post_delivery_project_verification_schema_version post_delivery_project_verified post_delivery_project_verified_task_id post_delivery_verified_runtime_project_id configuration_mode approval_policy context_pack_id context_pack_estimated_tokens context_pack_token_budget dispatch_execution dispatch_owner_task_id dispatch_owner_project_path prompt_delivery_method project_association_verification_source project_association_before project_association_after].each do |key|
         raise ValidationError, "DispatchReceipt is missing #{key}" unless Support.present?(value[key])
       end
-      %w[permission_profile sandbox_mode].each do |key|
+      %w[permission_profile sandbox_mode intermediary_dispatch_task_created post_delivery_verified_empty].each do |key|
         raise ValidationError, "DispatchReceipt is missing #{key}" unless value.key?(key)
       end
       unless (value["approval_policy"].is_a?(String) || value["approval_policy"].is_a?(Hash)) && Support.present?(value["approval_policy"])
@@ -149,11 +157,63 @@ module Kepler
       unless value["configuration_verification_schema_version"] == "kepler.worker-task-verification/v1"
         raise ValidationError, "DispatchReceipt configuration verification evidence is unsupported"
       end
+      unless value["post_delivery_project_verification_schema_version"] == "kepler.worker-task-verification/v1"
+        raise ValidationError, "DispatchReceipt post-delivery project verification evidence is unsupported"
+      end
       unless value["configuration_verified"] == true && value["configuration_verified_before_prompt"] == true
         raise ValidationError, "DispatchReceipt configuration must be verified before the worker prompt"
       end
+      unless value["post_delivery_project_verified"] == true
+        raise ValidationError, "DispatchReceipt project association must be verified after prompt delivery"
+      end
+      unless value["post_delivery_verified_empty"] == false
+        raise ValidationError, "DispatchReceipt post-delivery task must contain the delivered prompt"
+      end
       unless value["configuration_verified_task_id"] == value["task_id"]
         raise ValidationError, "DispatchReceipt verification task does not match the final worker task"
+      end
+      unless value["post_delivery_project_verified_task_id"] == value["task_id"]
+        raise ValidationError, "DispatchReceipt post-delivery verification task does not match the final worker task"
+      end
+      %w[bootstrap_expected_runtime_project_id bootstrap_actual_runtime_project_id configuration_verified_runtime_project_id post_delivery_verified_runtime_project_id].each do |key|
+        unless value[key] == value["runtime_project_id"]
+          raise ValidationError, "DispatchReceipt app-server project identity does not match the owning runtime project"
+        end
+      end
+      unless value["dispatch_execution"] == "current-control-task" &&
+             value["intermediary_dispatch_task_created"] == false
+        raise ValidationError, "DispatchReceipt must be executed by the current control task without an intermediary dispatcher"
+      end
+      if value["dispatch_owner_task_id"] == value["task_id"]
+        raise ValidationError, "DispatchReceipt control task cannot also be the repository worker"
+      end
+      unless value["prompt_delivery_method"] == "codex-thread-message"
+        raise ValidationError, "DispatchReceipt must use project-preserving Codex task messaging"
+      end
+      unless value["project_association_verification_source"] == "live-project-and-task-list"
+        raise ValidationError, "DispatchReceipt project association must come from the live project and task lists"
+      end
+      before = mapping!(value["project_association_before"], "DispatchReceipt project association before prompt")
+      after = mapping!(value["project_association_after"], "DispatchReceipt project association after prompt")
+      [before, after].each do |association|
+        unless association["runtime_project_id"] == value["runtime_project_id"] &&
+               association["project_path"] == value["project_path"] &&
+               Support.present?(association["task_cwd"])
+          raise ValidationError, "DispatchReceipt worker project association drifted from the verified target"
+        end
+      end
+      unless before["task_cwd"] == after["task_cwd"]
+        raise ValidationError, "DispatchReceipt worker task path changed during prompt delivery"
+      end
+      herdr_attachment!(value["herdr_attachment"], task_id: value["task_id"], worker_cwd: before["task_cwd"]) if value.key?("herdr_attachment")
+      begin
+        estimated = Integer(value["context_pack_estimated_tokens"])
+        budget = Integer(value["context_pack_token_budget"])
+      rescue ArgumentError, TypeError
+        raise ValidationError, "DispatchReceipt ContextPack token accounting must use integers"
+      end
+      unless estimated.positive? && budget.positive? && estimated <= budget
+        raise ValidationError, "DispatchReceipt ContextPack token accounting is invalid"
       end
       case value["configuration_mode"]
       when "global-config"
@@ -164,6 +224,39 @@ module Kepler
         raise ValidationError, "DispatchReceipt permission profile cannot select sandbox_mode" if Support.present?(value["sandbox_mode"])
       else
         raise ValidationError, "DispatchReceipt configuration mode is unsupported"
+      end
+      value
+    end
+
+    def cleanup_receipt!(value)
+      document!(value, "CleanupReceipt")
+      required = %w[api_version kind schema_version plan_id plan_revision unit_id task_id runtime_project_id project_path worker_cwd mode herdr_attachment herdr_workspace_closed task_archived remove_worktree_requested worktree_removed branch_preserved]
+      unknown = value.keys - required
+      raise ValidationError, "CleanupReceipt has unsupported fields: #{unknown.join(', ')}" unless unknown.empty?
+      %w[schema_version plan_id plan_revision unit_id task_id runtime_project_id project_path worker_cwd mode herdr_attachment].each do |key|
+        raise ValidationError, "CleanupReceipt is missing #{key}" unless Support.present?(value[key])
+      end
+      %w[herdr_workspace_closed task_archived remove_worktree_requested worktree_removed branch_preserved].each do |key|
+        raise ValidationError, "CleanupReceipt is missing #{key}" unless value.key?(key)
+      end
+      unless value["schema_version"] == "kepler.worker-cleanup/v1"
+        raise ValidationError, "CleanupReceipt schema version is unsupported"
+      end
+      begin
+        revision = Integer(value["plan_revision"])
+      rescue ArgumentError, TypeError
+        raise ValidationError, "CleanupReceipt plan revision must be an integer"
+      end
+      raise ValidationError, "CleanupReceipt plan revision must be positive" unless revision.positive?
+      herdr_attachment!(value["herdr_attachment"], task_id: value["task_id"], worker_cwd: value["worker_cwd"])
+      unless value["herdr_workspace_closed"] == true && value["task_archived"] == true && value["branch_preserved"] == true
+        raise ValidationError, "CleanupReceipt must close the owned Herdr workspace, archive the task, and preserve the branch"
+      end
+      unless [true, false].include?(value["remove_worktree_requested"]) && [true, false].include?(value["worktree_removed"])
+        raise ValidationError, "CleanupReceipt worktree outcomes must be boolean"
+      end
+      unless value["worktree_removed"] == value["remove_worktree_requested"]
+        raise ValidationError, "CleanupReceipt worktree removal outcome does not match the requested action"
       end
       value
     end
@@ -198,6 +291,38 @@ module Kepler
     def mapping!(value, label)
       raise ValidationError, "#{label} must be a mapping" unless value.is_a?(Hash)
       value
+    end
+
+    def herdr_attachment!(value, task_id:, worker_cwd:)
+      attachment = mapping!(value, "Herdr attachment")
+      required = %w[schema_version herdr_version protocol workspace_id tab_id pane_id agent_name agent_kind resumed_task_id worker_cwd workspace_owned tab_owned pane_owned agent_owned]
+      unknown = attachment.keys - required
+      raise ValidationError, "Herdr attachment has unsupported fields: #{unknown.join(', ')}" unless unknown.empty?
+      %w[schema_version herdr_version protocol workspace_id tab_id pane_id agent_name agent_kind resumed_task_id worker_cwd].each do |key|
+        raise ValidationError, "Herdr attachment is missing #{key}" unless Support.present?(attachment[key])
+      end
+      %w[workspace_owned tab_owned pane_owned agent_owned].each do |key|
+        raise ValidationError, "Herdr attachment is missing #{key}" unless attachment.key?(key)
+      end
+      unless attachment["schema_version"] == "kepler.herdr-attachment/v1" && attachment["agent_kind"] == "codex"
+        raise ValidationError, "Herdr attachment is unsupported"
+      end
+      begin
+        protocol = Integer(attachment["protocol"])
+      rescue ArgumentError, TypeError
+        raise ValidationError, "Herdr attachment protocol must be an integer"
+      end
+      raise ValidationError, "Herdr attachment protocol must be at least 19" unless protocol >= 19
+      unless attachment["resumed_task_id"] == task_id
+        raise ValidationError, "Herdr attachment resumed task does not match the worker task"
+      end
+      unless attachment["worker_cwd"] == worker_cwd
+        raise ValidationError, "Herdr attachment worker path does not match the worker task"
+      end
+      unless attachment["workspace_owned"] == true && attachment["tab_owned"] == true && attachment["pane_owned"] == true && attachment["agent_owned"] == true
+        raise ValidationError, "Herdr attachment must own its workspace, tab, pane, and agent"
+      end
+      attachment
     end
 
     def relative_path!(value, label)

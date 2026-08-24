@@ -25,25 +25,31 @@ calculation over Plan dependencies and validated WorkerResults.
 
 ## Responsibility boundaries
 
-- Sol creates and revises Plans. Planning may inspect evidence and control-room
-  state, but it cannot mutate connected repositories or dispatch workers.
-- Terra dispatches only ready units from one explicit Plan revision. It
-  verifies exact project/path identity, uses the permission-preserving
-  bootstrap for every new task, verifies the final Local or Worktree task
-  before its prompt, records attested receipts, returns them, and stops without
-  monitoring.
+- One Sol control task creates and revises Plans, dispatches exact ready units,
+  ingests final WorkerResults, and coordinates the next wave. Planning may
+  inspect evidence and control-room state, but it cannot mutate connected
+  repositories. Dispatch never creates an intermediary control-project task.
+- The control task verifies exact project/path identity, uses the
+  permission-preserving bootstrap bound to the owning opaque project ID for
+  every new Terra worker, verifies the final Local or Worktree task before its
+  prompt, and verifies both app-server and live owning project association
+  before and after project-preserving prompt delivery. It
+  records attested receipts and ends the dispatch turn without monitoring.
 - Workers remain directly accessible, fully capable Codex tasks. A ContextPack
   is initial relevant context, never a capability or inspection boundary.
 - Kepler status is derived from structured Plan, receipt, and result state. It
-  never infers completion by replaying a worker transcript.
+  may validate and idempotently ingest an exact WorkerResult from a completed
+  task's final response, but never infers completion from progress or replays a
+  worker transcript.
 
 ## Failure behavior
 
 Unknown topology, an unconfirmed ArchitectureMap, stale Plan revision,
 waiting unit, identity mismatch, missing bridge handoff, or ContextPack budget
 overrun fails closed. Direct prompted task creation, a non-empty unverified
-task, or any effective model, reasoning, approval, sandbox, permission-profile,
-or path mismatch also fails closed. Kepler reports the exact mismatch and does
+task, intermediary dispatcher, collaboration-agent worker routing, owning
+project reassociation, or any effective model, reasoning, approval, sandbox,
+permission-profile, or path mismatch also fails closed. Kepler reports the exact mismatch and does
 not guess a target, pick a newer revision, or silently perform owner work in
 the control project.
 
