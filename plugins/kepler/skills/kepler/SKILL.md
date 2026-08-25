@@ -26,14 +26,18 @@ Interpret natural language as the engineering objective and `/kepler` as the req
   intermediary control-project dispatcher task, and never dispatch waiting,
   ambiguous, or stale-revision work.
 - `/kepler status`: derive state from the Plan, receipts, and WorkerResults. For
-  a dispatched task with a final response, read only that final response,
+  a dispatched task with a final response, read only that final response. In
+  Herdr, call `collect_herdr_worker_result`; do not use a desktop-app, browser,
+  or terminal transcript surface. Then
   validate and idempotently ingest its exact WorkerResult, then show
   dependencies, workers, validation, blockers, newly ready units, and artifact
   token estimates. Never replay progress or transcripts, and never create a
   planner while collecting results.
-- `/kepler cleanup [unit]`: after status has ingested terminal WorkerResults,
-  prepare cleanup from the exact Plan revision, close and archive only
-  receipt-owned worker resources, record CleanupReceipts, and preserve every
+- `/kepler cleanup [unit]`: preview the exact receipt-owned worker tabs, tasks,
+  and optional safe Worktrees that would be removed. This form is read-only.
+- `/kepler cleanup authorize [unit]`: after the user reviews that preview,
+  perform its exact cleanup with one authorization, preserve the current Herdr
+  workspace and control agent, record CleanupReceipts, and preserve every
   branch. Refuse active, dirty, unmerged, unattested, or mismatched resources.
 - `/kepler review`: use `$kepler-review` to create a review-only Plan in the current verified Sol task and lead with findings. Do not create another planner task merely because review uses a new Plan. Fixes require separate authorization.
 - `/kepler doctor`: use `$kepler-doctor` for read-only integrity, exact-path, schema, architecture-map, and dispatch-capability checks.
@@ -105,14 +109,24 @@ with `bin/kepler dispatch record`, returns the receipts, and ends the dispatch
 turn without monitoring. It must not re-plan during dispatch, invent a target,
 implement, summarize a worker, or read worker progress.
 
-When the control task is running inside Herdr (`HERDR_ENV=1`), attach each
-verified empty worker task to an owned background Herdr workspace before prompt
-delivery by calling `attach_herdr_worker`. Herdr is a visibility and lifecycle
+When the control task is running inside Herdr (`HERDR_ENV=1`), use only the
+CLI project registry from `list_cli_projects`; never reuse a desktop-only opaque
+project ID. Require generated-Hub capability
+`kepler.command.cli-herdr-dispatch.v1`; if it is absent, stop and propose the
+managed Hub migration before dispatch because the preserved receipt schema
+cannot attest CLI-native delivery. Attach each
+verified empty worker task to a new owned tab inside the current control
+workspace before prompt delivery by calling `attach_herdr_worker`. Never create
+a worker workspace. Herdr is a visibility and lifecycle
 surface for the same exact Codex task, never a replacement worker runtime.
 Require the returned attachment to resume the same task ID at the same verified
-path. Deliver the ContextPack through the normal project-preserving Codex task
-message, perform the same post-delivery verification, and include the strict
-attachment object in the DispatchReceipt. Outside Herdr, keep normal Codex task
+path and record its explicit model, reasoning, and effective configuration
+launch evidence. Call `deliver_herdr_worker_prompt` with the serialized ContextPack exactly
+once and require its matching task, CLI project ID, path, prompt hash, and
+attachment receipt. This CLI-native Herdr prompt is the post-delivery project
+verification; do not call browser control, connect to the Codex app, or create
+another task. Include the strict attachment and prompt-delivery evidence in the
+DispatchReceipt. Outside Herdr, keep normal Codex task
 dispatch unchanged; do not launch or control a Herdr session from outside one.
 
 Read `references/dispatch.md` before dispatch. Preserve exact-project verification, the selected runtime/mode, and receipt-and-stop behavior.
@@ -146,12 +160,15 @@ not authorize Hub migration.
 ## Cleanup
 
 Cleanup is user-initiated and receipt-driven; status never performs it
-silently. Read `references/cleanup.md` before `/kepler cleanup`. Prepare the
-exact terminal unit set with `bin/kepler cleanup prepare`, call
-`cleanup_herdr_worker` for each envelope, and record each returned receipt with
-`bin/kepler cleanup record`. Keep the control workspace and control task.
-Closing an attached Herdr workspace and archiving its exact Codex worker are
-normal cleanup actions. Remove a Worktree only when the cleanup envelope
+silently. Read `references/cleanup.md` before either cleanup form. Bare
+`/kepler cleanup` runs `bin/kepler cleanup prepare`, displays the complete exact
+removal set, and stops without mutation. Only `/kepler cleanup authorize`
+passes `authorized: true` to `cleanup_herdr_worker` for every unchanged envelope
+from that preview, then records each returned receipt with
+`bin/kepler cleanup record`. One explicit authorization covers the displayed
+set; do not request another per-resource approval. Keep the current Herdr
+workspace, its control tab, and the control task. Close only receipt-owned worker
+tabs and archive their exact Codex workers. Remove a Worktree only when the cleanup envelope
 requests it and the tool independently proves the checkout is inactive, clean,
 registered, and already merged into the owning project's current checkout.
 Never delete worker branches or structured Plan evidence.

@@ -49,8 +49,11 @@ not a copied transcript.
 - Material Plan changes create a new visible revision.
 - Workers stay directly accessible and fully capable.
 - Dispatch ends with a receipt; Kepler does not monitor in the background.
-- Inside Herdr, a verified Codex worker can be attached to an owned workspace
+- Inside Herdr, a verified Codex worker is attached to an owned tab inside the
+  current control workspace
   without changing its task, project identity, configuration, or result path.
+  Kepler uses the persistent Codex CLI project registry and Herdr prompt
+  submission; no Codex desktop app or browser control is required.
 - Commits, remote writes, deployments, publication, and other consequential
   actions retain explicit approval gates.
 - Kepler is not a daemon, monorepo manager, transcript synchronizer, Mission or
@@ -78,6 +81,7 @@ edit connected repositories.
 /kepler dispatch
 /kepler status
 /kepler cleanup
+/kepler cleanup authorize
 ```
 
 Refine an active Plan in ordinary conversation. Open any worker directly when
@@ -88,12 +92,21 @@ next ready dispatch.
 
 Run the Kepler control agent as Codex inside a Herdr workspace to keep one
 persistent control surface and see repository workers as normal Herdr agents.
+Invoke the workflow in the Codex prompt as `$kepler plan`, `$kepler dispatch`,
+`$kepler status`, `$kepler cleanup`, and `$kepler cleanup authorize`; these are
+Codex skill requests, not shell commands.
 Kepler still creates and verifies each worker through Codex first; Herdr resumes
-that same task in its exact repository or Worktree. ContextPacks,
+that same task in a new tab inside the current workspace, using its exact
+repository or Worktree. It submits the ContextPack
+to that attached agent through Herdr CLI, verifies the persisted task/project
+association, and collects only the terminal final response. The Codex desktop
+app is not part of this path. ContextPacks,
 DispatchReceipts, WorkerResults, dependencies, and `/kepler status` behave the
-same. After terminal results are ingested, `/kepler cleanup` closes only
-receipt-owned worker workspaces, archives their Codex tasks, and removes only
-clean, inactive, already-merged Worktrees while preserving branches.
+same. After terminal results are ingested, `/kepler cleanup` previews the exact
+removal set. `/kepler cleanup authorize` applies that unchanged preview once,
+closing only receipt-owned worker tabs, archiving their Codex tasks, and
+removing only clean, inactive, already-merged Worktrees while preserving the
+current workspace, control agent, and every branch.
 
 Herdr is optional. Outside a Herdr-managed control agent, Kepler continues to
 use ordinary directly accessible Codex workers.

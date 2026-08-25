@@ -4,11 +4,11 @@
   "title": "Kepler CleanupReceipt",
   "type": "object",
   "additionalProperties": false,
-  "required": ["api_version", "kind", "schema_version", "plan_id", "plan_revision", "unit_id", "task_id", "runtime_project_id", "project_path", "worker_cwd", "mode", "herdr_attachment", "herdr_workspace_closed", "task_archived", "remove_worktree_requested", "worktree_removed", "branch_preserved"],
+  "required": ["api_version", "kind", "schema_version", "plan_id", "plan_revision", "unit_id", "task_id", "runtime_project_id", "project_path", "worker_cwd", "mode", "herdr_attachment", "task_archived", "remove_worktree_requested", "worktree_removed", "branch_preserved"],
   "properties": {
     "api_version": {"const": "kepler.dev/v1"},
     "kind": {"const": "CleanupReceipt"},
-    "schema_version": {"const": "kepler.worker-cleanup/v1"},
+    "schema_version": {"enum": ["kepler.worker-cleanup/v1", "kepler.worker-cleanup/v2"]},
     "plan_id": {"type": "string", "minLength": 1},
     "plan_revision": {"type": "integer", "minimum": 1},
     "unit_id": {"type": "string", "minLength": 1},
@@ -19,11 +19,39 @@
     "mode": {"type": "string", "minLength": 1},
     "herdr_attachment": {"$ref": "#/$defs/herdrAttachment"},
     "herdr_workspace_closed": {"const": true},
+    "herdr_workspace_preserved": {"const": true},
+    "herdr_worker_tab_closed": {"const": true},
     "task_archived": {"const": true},
     "remove_worktree_requested": {"type": "boolean"},
     "worktree_removed": {"type": "boolean"},
     "branch_preserved": {"const": true}
   },
+  "allOf": [
+    {
+      "if": {"properties": {"schema_version": {"const": "kepler.worker-cleanup/v1"}}, "required": ["schema_version"]},
+      "then": {"required": ["herdr_workspace_closed"]}
+    },
+    {
+      "if": {"properties": {"schema_version": {"const": "kepler.worker-cleanup/v2"}}, "required": ["schema_version"]},
+      "then": {
+        "required": ["herdr_workspace_preserved", "herdr_worker_tab_closed"],
+        "properties": {
+          "herdr_attachment": {
+            "allOf": [
+              {"$ref": "#/$defs/herdrAttachment"},
+              {
+                "required": ["attachment_mode", "control_tab_id", "control_pane_id"],
+                "properties": {
+                  "attachment_mode": {"const": "shared-control-workspace"},
+                  "workspace_owned": {"const": false}
+                }
+              }
+            ]
+          }
+        }
+      }
+    }
+  ],
   "$defs": {
     "herdrAttachment": {
       "type": "object",
@@ -38,12 +66,28 @@
         "pane_id": {"type": "string", "minLength": 1},
         "agent_name": {"type": "string", "minLength": 1},
         "agent_kind": {"const": "codex"},
+        "attachment_mode": {"const": "shared-control-workspace"},
+        "control_tab_id": {"type": "string", "minLength": 1},
+        "control_pane_id": {"type": "string", "minLength": 1},
+        "terminal_id": {"type": "string", "minLength": 1},
+        "resume_argv_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
         "resumed_task_id": {"type": "string", "minLength": 1},
         "worker_cwd": {"type": "string", "minLength": 1},
-        "workspace_owned": {"const": true},
+        "workspace_owned": {"type": "boolean"},
         "tab_owned": {"const": true},
         "pane_owned": {"const": true},
-        "agent_owned": {"const": true}
+        "agent_owned": {"const": true},
+        "model": {"type": "string", "minLength": 1},
+        "thinking": {"type": "string", "minLength": 1},
+        "configuration_mode": {"enum": ["global-config", "permission-profile"]},
+        "permission_profile": {"type": ["string", "null"]},
+        "sandbox_mode": {"type": ["string", "null"]},
+        "approval_policy": {
+          "oneOf": [
+            {"type": "string", "minLength": 1},
+            {"type": "object", "minProperties": 1}
+          ]
+        }
       }
     }
   }

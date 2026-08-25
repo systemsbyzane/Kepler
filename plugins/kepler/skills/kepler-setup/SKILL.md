@@ -11,8 +11,12 @@ It is mandatory for `/kepler setup`.
 Ordinary setup is project-first:
 
 1. Generate or open a `Kepler-<company>` control project.
-2. Call the live Codex project list. Show existing saved projects and let the
-   user select by exact path; preserve each opaque project ID.
+2. Call the live Codex project list. In Herdr, call `list_cli_projects`; never
+   use a desktop-app or browser surface. Show existing saved projects and let
+   the user select by exact path; preserve each opaque project ID. If an exact
+   user-selected path is absent from the CLI registry, show it and obtain
+   explicit confirmation before calling `register_cli_project`, then refresh
+   the CLI catalog.
 3. Save the unmodified project-list response to ignored local state and run
    `bin/kepler setup plan --project-catalog FILE --project-id ID ...`.
 4. Inspect selected projects read-only only as needed to propose non-exclusive

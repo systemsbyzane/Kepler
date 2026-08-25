@@ -49,13 +49,15 @@ For a preserved Hub that predates
 field name as permission to create a dispatcher task, and do not migrate the
 Hub during dispatch.
 
-Refresh the live project and task lists before prompt delivery. Require the
+Refresh the live project and task lists before prompt delivery. In Herdr, the
+live project source is `list_cli_projects`; desktop-only project IDs are invalid.
+Require the
 worker's live `projectId` to equal the selected owning runtime project ID and
 its exact Local or Worktree path to match the verified route. Continue an
 existing worker only with the project-preserving Codex task-message surface.
 Never use collaboration-agent spawn, delegation, or resume for a repository
 worker, because those surfaces can reassign the task to the control project.
-Before and immediately after any prompt delivery or continuation, call
+Before and immediately after any non-Herdr prompt delivery or continuation, call
 `verify_worker_task` with `expected_runtime_project_id` set to the owning ID;
 use `require_empty: true` only for the pre-prompt check and `false` for the
 post-delivery or existing-task checks. Recheck the same ID and path in the live
@@ -90,9 +92,11 @@ sending any prompt. A mismatched model, reasoning level, path, approval policy,
 sandbox, permission profile, or non-empty task is a dispatch failure.
 
 Only after configuration and live project-association verification may the
-control task send the complete worker prompt. After delivery, call
+control task send the complete worker prompt. Outside Herdr, after delivery call
 `verify_worker_task` again with `require_empty: false` and require the same task
-and project ID plus `empty: false` before recording. The
+and project ID plus `empty: false` before recording. In Herdr, use the integrated
+post-delivery association evidence returned by `deliver_herdr_worker_prompt`.
+The
 DispatchReceipt must identify `creation_method: kepler-bootstrap-worker-task`,
 the bootstrap task, the final verified task, both evidence schema versions,
 the expected and actual bootstrap project IDs, pre-prompt and post-delivery
@@ -109,7 +113,9 @@ from the compiled artifact so status can report artifact estimates without
 misrepresenting them as runtime usage.
 
 The bootstrap and verification tools cannot send a prompt, edit files, create a
-Worktree, delete or archive tasks, or monitor a worker. If either tool is
+Worktree, delete or archive tasks, or monitor a worker. In Herdr, only
+`deliver_herdr_worker_prompt` may submit the worker prompt, and it may wait only
+for bounded exact-delivery evidence. If a required tool is
 unavailable or rejects the effective configuration, fail closed instead of
 using another creation path.
 
@@ -135,19 +141,31 @@ validated WorkerResult advances Plan readiness.
 
 ## Optional Herdr attachment
 
-When `HERDR_ENV=1`, Kepler may expose the same verified worker task as a Herdr
+When `HERDR_ENV=1`, Kepler exposes the same verified worker task as a Herdr
 agent. This is attachment, not alternate dispatch: bootstrap and verify the
 Codex task first, then call `attach_herdr_worker` with the final task ID, owning
 project ID, exact Local or Worktree path, and effective configuration. The tool
-creates one background workspace, starts Codex with
-`resume <final-task-id>`, verifies Herdr detected that exact session, and
-returns owned workspace, tab, pane, and agent identities.
+creates one background tab inside the current control workspace, starts Codex with
+explicit model, reasoning, and sandbox/approval or profile arguments followed
+by `resume <final-task-id>`, verifies Herdr preserved the receipt-bound terminal
+and exact launch command, and returns the preserved workspace plus owned tab,
+pane, and agent identities. It must never create a separate worker workspace.
+If Herdr also exposes a Codex session ID, it must match the task.
 
-The attachment tool cannot send the ContextPack. After attachment, deliver the
-prompt through the same project-preserving Codex task-message surface and run
-the normal post-delivery project verification. Record the attachment only when
-its resumed task ID and worker path match the DispatchReceipt. Herdr lifecycle
+The attachment tool cannot send the ContextPack. After attachment, call
+`deliver_herdr_worker_prompt`; it submits through `herdr agent prompt`, then
+proves the exact prompt was persisted on the same CLI task, project ID, and
+path. It returns without waiting for completion. Browser controls, the Codex
+desktop app, collaboration tasks, and transcript scraping are prohibited
+fallbacks. Record the attachment only when its resumed task ID and worker path
+match the DispatchReceipt. Herdr lifecycle
 states are display evidence only; they never complete a unit or replace a
 WorkerResult. If Herdr is absent, the caller is outside Herdr, attachment
-fails, or the session identity does not match, fail the requested Herdr
+fails, or the receipt-bound terminal/task identity does not match, fail the requested Herdr
 attachment without falling back to a new terminal-created worker.
+
+For `/kepler status` in Herdr, call `collect_herdr_worker_result` only after the
+agent is idle or done. It returns only the latest completed final response from
+the exact task and rejects active, failed, interrupted, reassociated, or
+mismatched workers. Validate and ingest that response as the WorkerResult; do
+not read the terminal transcript or progress output.

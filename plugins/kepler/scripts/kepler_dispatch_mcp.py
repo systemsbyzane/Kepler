@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 import queue
@@ -18,9 +19,11 @@ from typing import Any, Dict, Iterable, Optional
 
 
 SERVER_NAME = "kepler-dispatch"
-SERVER_VERSION = "1.1.1"
+SERVER_VERSION = "1.1.2"
 DEFAULT_TIMEOUT_SECONDS = 20.0
 HERDR_TIMEOUT_SECONDS = 45.0
+PROMPT_DELIVERY_TIMEOUT_SECONDS = 8.0
+MAX_PROMPT_BYTES = 262_144
 THINKING_LEVELS = {"low", "medium", "high", "xhigh", "max", "ultra"}
 SAFE_IDENTIFIER = re.compile(r"^[A-Za-z0-9_.:+-]+$")
 HERDR_AGENT_NAME = re.compile(r"^[a-z][a-z0-9_-]{0,31}$")
@@ -103,6 +106,35 @@ def _require_herdr_environment() -> None:
         raise DispatchError("HERDR_ENV=1 is required for Herdr worker attachment")
 
 
+def _validated_prompt(value: Any) -> str:
+    if not isinstance(value, str):
+        raise DispatchError("prompt must be a string")
+    if not value.strip():
+        raise DispatchError("prompt must not be empty")
+    if "\x00" in value:
+        raise DispatchError("prompt must not contain NUL characters")
+    if len(value.encode("utf-8")) > MAX_PROMPT_BYTES:
+        raise DispatchError(
+            f"prompt exceeds the {MAX_PROMPT_BYTES}-byte delivery limit"
+        )
+    return value
+
+
+def _validated_delivery_id(value: Any) -> str:
+    if not isinstance(value, str):
+        raise DispatchError("delivery_id must be a string")
+    normalized = value.strip()
+    if not normalized or len(normalized) > 200:
+        raise DispatchError("delivery_id must contain 1 to 200 characters")
+    if not SAFE_IDENTIFIER.fullmatch(normalized):
+        raise DispatchError("delivery_id contains unsupported characters")
+    return normalized
+
+
+def _prompt_sha256(prompt: str) -> str:
+    return hashlib.sha256(prompt.encode("utf-8")).hexdigest()
+
+
 def _run_herdr_json(executable: str, arguments: list[str]) -> Dict[str, Any]:
     try:
         completed = subprocess.run(
@@ -172,6 +204,7 @@ def _validate_herdr_agent(
     worker_cwd: str,
     thread_id: str,
     require_terminal_state: bool,
+    terminal_id: Optional[str] = None,
 ) -> None:
     for field, expected in (
         ("workspace_id", workspace_id),
@@ -188,17 +221,95 @@ def _validate_herdr_agent(
         raise DispatchError("Herdr agent did not return a resolvable cwd")
     if actual_cwd != worker_cwd:
         raise DispatchError("Herdr agent cwd does not match the exact worker path")
+    if terminal_id is not None and agent.get("terminal_id") != terminal_id:
+        raise DispatchError("Herdr agent terminal does not match the attachment")
     session = agent.get("agent_session")
-    if not isinstance(session, dict) or session.get("value") != thread_id:
-        raise DispatchError("Herdr agent session does not match the exact worker task")
+    if isinstance(session, dict) and session.get("value") != thread_id:
+        actual_session = session.get("value") if isinstance(session, dict) else None
+        raise DispatchError(
+            "Herdr agent session does not match the exact worker task "
+            f"(expected {thread_id!r}, observed {actual_session!r})"
+        )
+    if not isinstance(session, dict) and terminal_id is None:
+        raise DispatchError(
+            "Herdr agent did not expose a session or receipt-bound terminal identity"
+        )
     if require_terminal_state and agent.get("agent_status") not in {"idle", "done"}:
         raise DispatchError("Herdr worker is active or not in a terminal state")
+
+
+def _wait_for_herdr_agent_attachment(
+    executable: str,
+    *,
+    target: str,
+    workspace_id: str,
+    tab_id: str,
+    pane_id: str,
+    agent_name: str,
+    worker_cwd: str,
+    thread_id: str,
+    terminal_id: str,
+) -> Dict[str, Any]:
+    deadline = time.monotonic() + PROMPT_DELIVERY_TIMEOUT_SECONDS
+    last_error: Optional[DispatchError] = None
+    while True:
+        agent = _herdr_agent_info(executable, target)
+        try:
+            _validate_herdr_agent(
+                agent,
+                workspace_id=workspace_id,
+                tab_id=tab_id,
+                pane_id=pane_id,
+                agent_name=agent_name,
+                worker_cwd=worker_cwd,
+                thread_id=thread_id,
+                require_terminal_state=False,
+                terminal_id=terminal_id,
+            )
+            return agent
+        except DispatchError as error:
+            if (
+                "session does not match" not in str(error)
+                and "terminal does not match" not in str(error)
+            ):
+                raise
+            last_error = error
+        if time.monotonic() >= deadline:
+            assert last_error is not None
+            raise last_error
+        time.sleep(0.1)
 
 
 def _close_herdr_workspace(executable: str, workspace_id: str) -> None:
     result = _run_herdr(executable, ["workspace", "close", workspace_id])
     if result.get("type") != "ok":
         raise DispatchError("Herdr workspace/close did not confirm closure")
+
+
+def _close_herdr_tab(executable: str, tab_id: str) -> None:
+    result = _run_herdr(executable, ["tab", "close", tab_id])
+    if result.get("type") != "ok":
+        raise DispatchError("Herdr tab/close did not confirm closure")
+
+
+def _current_herdr_control_pane(executable: str) -> Dict[str, str]:
+    result = _run_herdr(executable, ["pane", "current", "--current"])
+    pane = result.get("pane")
+    if result.get("type") != "pane_current" or not isinstance(pane, dict):
+        raise DispatchError("Herdr pane/current did not return the control pane")
+    if pane.get("agent") != HERDR_AGENT_KIND:
+        raise DispatchError("Herdr current pane is not the Codex control agent")
+    return {
+        "workspace_id": _validated_herdr_identifier(
+            pane.get("workspace_id"), "control workspace_id"
+        ),
+        "tab_id": _validated_herdr_identifier(
+            pane.get("tab_id"), "control tab_id"
+        ),
+        "pane_id": _validated_herdr_identifier(
+            pane.get("pane_id"), "control pane_id"
+        ),
+    }
 
 
 def _validated_inputs(
@@ -352,6 +463,223 @@ class AppServerClient:
         if not isinstance(message, dict):
             raise DispatchError("app-server emitted a non-object response")
         return message
+
+
+def _normalize_project(project: Any) -> Dict[str, Any]:
+    if not isinstance(project, dict):
+        raise DispatchError("project response contains a non-object entry")
+    project_id = project.get("id")
+    name = project.get("name")
+    roots = project.get("roots")
+    if not isinstance(project_id, str) or not project_id:
+        raise DispatchError("project response is missing an opaque id")
+    if not isinstance(name, str) or not name.strip():
+        raise DispatchError("project response is missing a name")
+    if not isinstance(roots, list) or not roots:
+        raise DispatchError("project response is missing roots")
+    normalized_roots: list[Dict[str, str]] = []
+    for root in roots:
+        raw_path = root.get("path") if isinstance(root, dict) else None
+        try:
+            path = str(Path(raw_path or "").expanduser().resolve(strict=True))
+        except (OSError, RuntimeError):
+            raise DispatchError("project response contains an unresolvable root")
+        normalized_roots.append({"path": path})
+    return {
+        "id": project_id,
+        "name": name,
+        "roots": normalized_roots,
+        "metadata": project.get("metadata", {}),
+        "createdAt": project.get("createdAt"),
+        "updatedAt": project.get("updatedAt"),
+    }
+
+
+def _list_projects(client: AppServerClient) -> list[Dict[str, Any]]:
+    projects: list[Dict[str, Any]] = []
+    cursor: Optional[str] = None
+    for _ in range(100):
+        params: Dict[str, Any] = {"limit": 100}
+        if cursor is not None:
+            params["cursor"] = cursor
+        result = client.request("project/list", params)
+        data = result.get("data")
+        if not isinstance(data, list):
+            raise DispatchError("project/list did not return a project array")
+        projects.extend(_normalize_project(project) for project in data)
+        next_cursor = result.get("nextCursor")
+        if next_cursor is None:
+            return projects
+        if not isinstance(next_cursor, str) or not next_cursor:
+            raise DispatchError("project/list returned an invalid cursor")
+        cursor = next_cursor
+    raise DispatchError("project/list exceeded the pagination limit")
+
+
+def list_cli_projects(
+    *, codex_executable: Optional[str] = None
+) -> Dict[str, Any]:
+    """List the saved projects owned by the local Codex CLI runtime."""
+    _require_herdr_environment()
+    executable = _resolve_codex_executable(codex_executable)
+    with AppServerClient(executable) as client:
+        projects = _list_projects(client)
+    catalog_projects = []
+    for project in projects:
+        if len(project["roots"]) != 1:
+            raise DispatchError(
+                f"CLI project {project['id']} must have exactly one root for Kepler setup"
+            )
+        path = project["roots"][0]["path"]
+        catalog_projects.append(
+            {
+                "projectId": project["id"],
+                "path": path,
+                "label": project["name"],
+                "projectKind": "local",
+                "isGitRepository": (Path(path) / ".git").exists(),
+            }
+        )
+    return {
+        "schemaVersion": 2,
+        "catalogSchema": "kepler.cli-project-catalog/v1",
+        "selectionSource": "kepler_dispatch.list_cli_projects",
+        "transport": "codex-cli-app-server",
+        "projects": catalog_projects,
+    }
+
+
+def register_cli_project(
+    *,
+    cwd: str,
+    name: str,
+    confirmed: bool,
+    codex_executable: Optional[str] = None,
+) -> Dict[str, Any]:
+    """Idempotently register one exact repository path with the CLI runtime."""
+    _require_herdr_environment()
+    if confirmed is not True:
+        raise DispatchError("confirmed must be true before registering a CLI project")
+    try:
+        project_path = str(Path(cwd).expanduser().resolve(strict=True))
+    except (OSError, RuntimeError):
+        raise DispatchError("cwd must resolve to an existing directory")
+    if not Path(project_path).is_dir():
+        raise DispatchError("cwd must resolve to an existing directory")
+    if not isinstance(name, str) or not name.strip() or len(name.strip()) > 120:
+        raise DispatchError("name must contain 1 to 120 characters")
+    if any(ord(character) < 32 or ord(character) == 127 for character in name):
+        raise DispatchError("name contains control characters")
+    executable = _resolve_codex_executable(codex_executable)
+    with AppServerClient(executable) as client:
+        matches = [
+            project
+            for project in _list_projects(client)
+            if any(root["path"] == project_path for root in project["roots"])
+        ]
+        if len(matches) > 1:
+            raise DispatchError("multiple CLI projects claim the exact repository path")
+        created = False
+        if matches:
+            project = matches[0]
+        else:
+            idempotency_key = "kepler-cli-" + hashlib.sha256(
+                project_path.encode("utf-8")
+            ).hexdigest()
+            result = client.request(
+                "project/create",
+                {
+                    "idempotencyKey": idempotency_key,
+                    "name": name.strip(),
+                    "roots": [{"path": project_path}],
+                    "metadata": {"kepler.transport": "cli"},
+                },
+            )
+            project = _normalize_project(result.get("project"))
+            created = True
+        if not any(root["path"] == project_path for root in project["roots"]):
+            raise DispatchError("CLI project registration did not preserve the exact path")
+        read_result = client.request("project/read", {"projectId": project["id"]})
+        verified = _normalize_project(read_result.get("project"))
+        if verified["id"] != project["id"] or verified["roots"] != project["roots"]:
+            raise DispatchError("project/read did not verify the registered CLI project")
+    return {
+        "schemaVersion": "kepler.cli-project-registration/v1",
+        "transport": "codex-cli-app-server",
+        "created": created,
+        "project": verified,
+    }
+
+
+def _read_thread(
+    executable: str, thread_id: str, *, include_turns: bool = True
+) -> Dict[str, Any]:
+    with AppServerClient(executable) as client:
+        result = client.request(
+            "thread/read",
+            {"threadId": thread_id, "includeTurns": include_turns},
+        )
+    thread = result.get("thread")
+    if not isinstance(thread, dict) or thread.get("id") != thread_id:
+        raise DispatchError("thread/read did not return the exact worker task")
+    return thread
+
+
+def _verified_thread_association(
+    thread: Dict[str, Any],
+    *,
+    expected_runtime_project_id: str,
+    cwd: str,
+) -> Dict[str, Any]:
+    runtime_project_id = _validated_runtime_project_id(expected_runtime_project_id)
+    if thread.get("projectId") != runtime_project_id:
+        raise DispatchError(
+            "thread/read projectId does not match expected_runtime_project_id"
+        )
+    try:
+        actual_cwd = str(Path(thread.get("cwd", "")).expanduser().resolve(strict=True))
+    except (OSError, RuntimeError):
+        raise DispatchError("thread/read did not return a resolvable cwd")
+    expected_cwd = str(Path(cwd).expanduser().resolve(strict=True))
+    if actual_cwd != expected_cwd:
+        raise DispatchError("thread/read cwd does not match the exact worker path")
+    turns = thread.get("turns")
+    if not isinstance(turns, list):
+        raise DispatchError("thread/read did not return worker turns")
+    return {
+        "runtimeProjectId": runtime_project_id,
+        "cwd": actual_cwd,
+        "turns": turns,
+    }
+
+
+def _user_message_text(item: Any) -> Optional[str]:
+    if not isinstance(item, dict) or item.get("type") != "userMessage":
+        return None
+    content = item.get("content")
+    if not isinstance(content, list):
+        return None
+    text_parts: list[str] = []
+    for entry in content:
+        if not isinstance(entry, dict) or entry.get("type") != "text":
+            return None
+        text = entry.get("text")
+        if not isinstance(text, str):
+            return None
+        text_parts.append(text)
+    return "".join(text_parts)
+
+
+def _thread_contains_prompt(turns: list[Any], prompt_sha256: str) -> bool:
+    for turn in turns:
+        items = turn.get("items") if isinstance(turn, dict) else None
+        if not isinstance(items, list):
+            continue
+        for item in items:
+            text = _user_message_text(item)
+            if text is not None and _prompt_sha256(text) == prompt_sha256:
+                return True
+    return False
 
 
 def _allowed_profiles(items: Iterable[Dict[str, Any]]) -> Dict[str, Dict[str, Any]]:
@@ -647,7 +975,7 @@ def attach_herdr_worker(
 ) -> Dict[str, Any]:
     """Attach one Herdr Codex terminal to an already-empty exact worker task."""
     _require_herdr_environment()
-    verification = verify_worker_task(
+    values = _validated_verification_inputs(
         thread_id=thread_id,
         expected_runtime_project_id=expected_runtime_project_id,
         cwd=cwd,
@@ -657,9 +985,43 @@ def attach_herdr_worker(
         approval_policy=approval_policy,
         permission_profile=permission_profile,
         sandbox_mode=sandbox_mode,
-        require_empty=True,
-        codex_executable=codex_executable,
     )
+    codex = _resolve_codex_executable(codex_executable)
+    thread = _read_thread(codex, values["thread_id"], include_turns=True)
+    association = _verified_thread_association(
+        thread,
+        expected_runtime_project_id=values["expected_runtime_project_id"],
+        cwd=values["cwd"],
+    )
+    if association["turns"]:
+        raise DispatchError(
+            "worker task is not empty; configuration must be verified before its prompt"
+        )
+    resume_arguments = [
+        "--no-alt-screen",
+        "-c",
+        "check_for_update_on_startup=false",
+        "-m",
+        values["model"],
+        "-c",
+        f'model_reasoning_effort="{values["thinking"]}"',
+    ]
+    if values["configuration_mode"] == "permission-profile":
+        resume_arguments.extend(["-p", values["permission_profile"]])
+    else:
+        if not isinstance(values["approval_policy"], str):
+            raise DispatchError(
+                "Herdr CLI global-config attachment requires a string approval_policy"
+            )
+        resume_arguments.extend(
+            [
+                "-s",
+                values["sandbox_mode"],
+                "-a",
+                values["approval_policy"],
+            ]
+        )
+    resume_arguments.extend(["resume", values["thread_id"]])
     label = _validated_herdr_label(workspace_label)
     name = _validated_herdr_agent_name(agent_name)
     executable = _resolve_herdr_executable(herdr_executable)
@@ -672,39 +1034,50 @@ def attach_herdr_worker(
     if any(isinstance(agent, dict) and agent.get("name") == name for agent in agents):
         raise DispatchError("agent_name is already in use by a Herdr agent")
 
-    created_workspace_id: Optional[str] = None
+    control = _current_herdr_control_pane(executable)
+    created_tab_id: Optional[str] = None
     try:
         created = _run_herdr(
             executable,
-            ["workspace", "create", "--cwd", verification["cwd"], "--label", label, "--no-focus"],
+            [
+                "tab",
+                "create",
+                "--workspace",
+                control["workspace_id"],
+                "--cwd",
+                association["cwd"],
+                "--label",
+                label,
+                "--no-focus",
+            ],
         )
-        workspace = created.get("workspace")
         tab = created.get("tab")
         root_pane = created.get("root_pane")
         if (
-            created.get("type") != "workspace_created"
-            or not isinstance(workspace, dict)
+            created.get("type") != "tab_created"
             or not isinstance(tab, dict)
             or not isinstance(root_pane, dict)
         ):
-            raise DispatchError("Herdr workspace/create returned an invalid attachment")
-        workspace_id = _validated_herdr_identifier(workspace.get("workspace_id"), "workspace_id")
-        created_workspace_id = workspace_id
+            raise DispatchError("Herdr tab/create returned an invalid attachment")
+        workspace_id = control["workspace_id"]
         tab_id = _validated_herdr_identifier(tab.get("tab_id"), "tab_id")
+        created_tab_id = tab_id
         pane_id = _validated_herdr_identifier(root_pane.get("pane_id"), "pane_id")
         if (
             tab.get("workspace_id") != workspace_id
             or root_pane.get("workspace_id") != workspace_id
             or root_pane.get("tab_id") != tab_id
+            or tab_id == control["tab_id"]
+            or pane_id == control["pane_id"]
         ):
-            raise DispatchError("Herdr workspace/create identifiers are inconsistent")
+            raise DispatchError("Herdr tab/create identifiers are inconsistent")
         try:
             created_cwd = str(Path(root_pane.get("cwd", "")).expanduser().resolve(strict=True))
         except (OSError, RuntimeError):
             raise DispatchError("Herdr workspace/create did not return a resolvable cwd")
-        if created_cwd != verification["cwd"]:
-            raise DispatchError("Herdr workspace/create cwd does not match the exact worker path")
-        _run_herdr(
+        if created_cwd != association["cwd"]:
+            raise DispatchError("Herdr tab/create cwd does not match the exact worker path")
+        started = _run_herdr(
             executable,
             [
                 "agent",
@@ -715,26 +1088,38 @@ def attach_herdr_worker(
                 "--pane",
                 pane_id,
                 "--",
-                "--no-alt-screen",
-                "resume",
-                verification["threadId"],
+                *resume_arguments,
             ],
         )
-        agent = _herdr_agent_info(executable, name)
-        _validate_herdr_agent(
-            agent,
+        expected_argv = ["codex", *resume_arguments]
+        started_agent = started.get("agent")
+        if (
+            started.get("type") != "agent_started"
+            or not isinstance(started_agent, dict)
+            or started.get("argv") != expected_argv
+        ):
+            raise DispatchError("Herdr agent/start did not preserve the exact Codex resume argv")
+        terminal_id = _validated_herdr_identifier(
+            started_agent.get("terminal_id"), "terminal_id"
+        )
+        resume_argv_sha256 = hashlib.sha256(
+            json.dumps(expected_argv, separators=(",", ":")).encode("utf-8")
+        ).hexdigest()
+        _wait_for_herdr_agent_attachment(
+            executable,
+            target=name,
             workspace_id=workspace_id,
             tab_id=tab_id,
             pane_id=pane_id,
             agent_name=name,
-            worker_cwd=verification["cwd"],
-            thread_id=verification["threadId"],
-            require_terminal_state=False,
+            worker_cwd=association["cwd"],
+            thread_id=values["thread_id"],
+            terminal_id=terminal_id,
         )
     except Exception:
-        if created_workspace_id is not None:
+        if created_tab_id is not None:
             try:
-                _close_herdr_workspace(executable, created_workspace_id)
+                _close_herdr_tab(executable, created_tab_id)
             except DispatchError:
                 pass
         raise
@@ -748,12 +1133,216 @@ def attach_herdr_worker(
         "pane_id": pane_id,
         "agent_name": name,
         "agent_kind": HERDR_AGENT_KIND,
-        "resumed_task_id": verification["threadId"],
-        "worker_cwd": verification["cwd"],
-        "workspace_owned": True,
+        "attachment_mode": "shared-control-workspace",
+        "control_tab_id": control["tab_id"],
+        "control_pane_id": control["pane_id"],
+        "terminal_id": terminal_id,
+        "resume_argv_sha256": resume_argv_sha256,
+        "resumed_task_id": values["thread_id"],
+        "worker_cwd": association["cwd"],
+        "model": values["model"],
+        "thinking": values["thinking"],
+        "configuration_mode": values["configuration_mode"],
+        "permission_profile": values["permission_profile"],
+        "sandbox_mode": values["sandbox_mode"],
+        "approval_policy": values["approval_policy"],
+        "workspace_owned": False,
         "tab_owned": True,
         "pane_owned": True,
         "agent_owned": True,
+    }
+
+
+def deliver_herdr_worker_prompt(
+    *,
+    thread_id: str,
+    expected_runtime_project_id: str,
+    cwd: str,
+    delivery_id: str,
+    prompt: str,
+    herdr_attachment: Dict[str, Any],
+    require_empty: bool = True,
+    codex_executable: Optional[str] = None,
+    herdr_executable: Optional[str] = None,
+) -> Dict[str, Any]:
+    """Submit one exact ContextPack prompt through the attached Herdr agent."""
+    _require_herdr_environment()
+    if not isinstance(require_empty, bool):
+        raise DispatchError("require_empty must be a boolean")
+    runtime_project_id = _validated_runtime_project_id(expected_runtime_project_id)
+    identifier = _validated_delivery_id(delivery_id)
+    prompt_value = _validated_prompt(prompt)
+    prompt_digest = _prompt_sha256(prompt_value)
+    try:
+        worker_cwd = str(Path(cwd).expanduser().resolve(strict=True))
+    except (OSError, RuntimeError):
+        raise DispatchError("cwd must resolve to an existing directory")
+    attachment = _validate_cleanup_attachment(
+        herdr_attachment,
+        thread_id=thread_id,
+        runtime_project_id=runtime_project_id,
+        worker_cwd=worker_cwd,
+    )
+    codex = _resolve_codex_executable(codex_executable)
+    herdr = _resolve_herdr_executable(herdr_executable)
+    _verify_herdr_capability(herdr)
+    agent = _herdr_agent_info(herdr, attachment["agent_name"])
+    _validate_herdr_agent(
+        agent,
+        workspace_id=attachment["workspace_id"],
+        tab_id=attachment["tab_id"],
+        pane_id=attachment["pane_id"],
+        agent_name=attachment["agent_name"],
+        worker_cwd=worker_cwd,
+        thread_id=thread_id,
+        require_terminal_state=True,
+        terminal_id=attachment.get("terminal_id"),
+    )
+
+    before_thread = _read_thread(codex, thread_id, include_turns=True)
+    before = _verified_thread_association(
+        before_thread,
+        expected_runtime_project_id=runtime_project_id,
+        cwd=worker_cwd,
+    )
+    already_delivered = _thread_contains_prompt(before["turns"], prompt_digest)
+    if require_empty and before["turns"] and not already_delivered:
+        raise DispatchError("initial prompt delivery requires an empty worker task")
+    if not require_empty and not before["turns"]:
+        raise DispatchError("continuation prompt delivery requires an existing worker turn")
+
+    if not already_delivered:
+        result = _run_herdr(
+            herdr,
+            ["agent", "prompt", attachment["agent_name"], prompt_value],
+        )
+        if result.get("type") not in {"agent_prompted", "ok"}:
+            raise DispatchError("Herdr agent/prompt did not confirm submission")
+
+    deadline = time.monotonic() + PROMPT_DELIVERY_TIMEOUT_SECONDS
+    after = before
+    while not _thread_contains_prompt(after["turns"], prompt_digest):
+        if time.monotonic() >= deadline:
+            raise DispatchError(
+                "Herdr prompt was submitted but the exact worker task did not record it"
+            )
+        time.sleep(0.1)
+        after_thread = _read_thread(codex, thread_id, include_turns=True)
+        after = _verified_thread_association(
+            after_thread,
+            expected_runtime_project_id=runtime_project_id,
+            cwd=worker_cwd,
+        )
+    final_agent = _herdr_agent_info(herdr, attachment["agent_name"])
+    _validate_herdr_agent(
+        final_agent,
+        workspace_id=attachment["workspace_id"],
+        tab_id=attachment["tab_id"],
+        pane_id=attachment["pane_id"],
+        agent_name=attachment["agent_name"],
+        worker_cwd=worker_cwd,
+        thread_id=thread_id,
+        require_terminal_state=False,
+        terminal_id=attachment.get("terminal_id"),
+    )
+    return {
+        "schemaVersion": "kepler.herdr-prompt-delivery/v1",
+        "delivered": True,
+        "deduplicated": already_delivered,
+        "deliveryId": identifier,
+        "deliveryMethod": "herdr-agent-prompt",
+        "threadId": thread_id,
+        "expectedRuntimeProjectId": runtime_project_id,
+        "actualRuntimeProjectId": after["runtimeProjectId"],
+        "cwd": after["cwd"],
+        "promptSha256": prompt_digest,
+        "promptBytes": len(prompt_value.encode("utf-8")),
+        "turnCountBefore": len(before["turns"]),
+        "turnCountAfter": len(after["turns"]),
+        "herdrAttachment": attachment,
+    }
+
+
+def collect_herdr_worker_result(
+    *,
+    thread_id: str,
+    expected_runtime_project_id: str,
+    cwd: str,
+    herdr_attachment: Dict[str, Any],
+    codex_executable: Optional[str] = None,
+    herdr_executable: Optional[str] = None,
+) -> Dict[str, Any]:
+    """Return only the latest terminal final response from an exact Herdr worker."""
+    _require_herdr_environment()
+    runtime_project_id = _validated_runtime_project_id(expected_runtime_project_id)
+    try:
+        worker_cwd = str(Path(cwd).expanduser().resolve(strict=True))
+    except (OSError, RuntimeError):
+        raise DispatchError("cwd must resolve to an existing directory")
+    attachment = _validate_cleanup_attachment(
+        herdr_attachment,
+        thread_id=thread_id,
+        runtime_project_id=runtime_project_id,
+        worker_cwd=worker_cwd,
+    )
+    herdr = _resolve_herdr_executable(herdr_executable)
+    _verify_herdr_capability(herdr)
+    agent = _herdr_agent_info(herdr, attachment["agent_name"])
+    _validate_herdr_agent(
+        agent,
+        workspace_id=attachment["workspace_id"],
+        tab_id=attachment["tab_id"],
+        pane_id=attachment["pane_id"],
+        agent_name=attachment["agent_name"],
+        worker_cwd=worker_cwd,
+        thread_id=thread_id,
+        require_terminal_state=True,
+        terminal_id=attachment.get("terminal_id"),
+    )
+    codex = _resolve_codex_executable(codex_executable)
+    thread = _read_thread(codex, thread_id, include_turns=True)
+    verified = _verified_thread_association(
+        thread,
+        expected_runtime_project_id=runtime_project_id,
+        cwd=worker_cwd,
+    )
+    if not verified["turns"]:
+        raise DispatchError("worker task has no turns to collect")
+    turn = verified["turns"][-1]
+    if not isinstance(turn, dict):
+        raise DispatchError("latest worker turn is invalid")
+    status = turn.get("status")
+    if status != "completed":
+        raise DispatchError(f"latest worker turn is not completed: {status!r}")
+    items = turn.get("items")
+    if not isinstance(items, list):
+        raise DispatchError("latest worker turn has no readable items")
+    agent_messages = [
+        item
+        for item in items
+        if isinstance(item, dict)
+        and item.get("type") == "agentMessage"
+        and isinstance(item.get("text"), str)
+        and item["text"].strip()
+    ]
+    finals = [item for item in agent_messages if item.get("phase") == "final_answer"]
+    if finals:
+        final = finals[-1]
+    elif agent_messages and all(item.get("phase") is None for item in agent_messages):
+        final = agent_messages[-1]
+    else:
+        raise DispatchError("completed worker turn has no final response")
+    return {
+        "schemaVersion": "kepler.herdr-worker-result-collection/v1",
+        "collected": True,
+        "threadId": thread_id,
+        "expectedRuntimeProjectId": runtime_project_id,
+        "actualRuntimeProjectId": verified["runtimeProjectId"],
+        "cwd": verified["cwd"],
+        "turnId": turn.get("id"),
+        "turnStatus": status,
+        "finalResponse": final["text"],
+        "herdrAttachment": attachment,
     }
 
 
@@ -831,12 +1420,23 @@ def _validate_cleanup_attachment(
         "pane_id",
         "agent_name",
         "agent_kind",
+        "attachment_mode",
+        "control_tab_id",
+        "control_pane_id",
         "resumed_task_id",
         "worker_cwd",
         "workspace_owned",
         "tab_owned",
         "pane_owned",
         "agent_owned",
+        "terminal_id",
+        "resume_argv_sha256",
+        "model",
+        "thinking",
+        "configuration_mode",
+        "permission_profile",
+        "sandbox_mode",
+        "approval_policy",
     }
     unknown = set(attachment) - allowed
     if unknown:
@@ -849,7 +1449,6 @@ def _validate_cleanup_attachment(
         "resumed_task_id": thread_id,
         "worker_cwd": worker_cwd,
         "agent_kind": HERDR_AGENT_KIND,
-        "workspace_owned": True,
         "tab_owned": True,
         "pane_owned": True,
         "agent_owned": True,
@@ -860,11 +1459,68 @@ def _validate_cleanup_attachment(
     for key in ("workspace_id", "tab_id", "pane_id", "agent_name"):
         _validated_herdr_identifier(attachment.get(key), f"herdr_attachment.{key}")
     _validated_herdr_agent_name(attachment["agent_name"])
+    attachment_mode = attachment.get("attachment_mode")
+    if attachment_mode == "shared-control-workspace":
+        if attachment.get("workspace_owned") is not False:
+            raise DispatchError(
+                "shared Herdr attachment must not own the control workspace"
+            )
+        for key in ("control_tab_id", "control_pane_id"):
+            _validated_herdr_identifier(
+                attachment.get(key), f"herdr_attachment.{key}"
+            )
+        if attachment["tab_id"] == attachment["control_tab_id"]:
+            raise DispatchError("worker tab cannot be the control tab")
+        if attachment["pane_id"] == attachment["control_pane_id"]:
+            raise DispatchError("worker pane cannot be the control pane")
+    elif attachment_mode is None:
+        if attachment.get("workspace_owned") is not True:
+            raise DispatchError(
+                "legacy Herdr attachment must own its worker workspace"
+            )
+    else:
+        raise DispatchError("herdr_attachment attachment_mode is unsupported")
     if not isinstance(attachment.get("protocol"), int) or attachment["protocol"] < 19:
         raise DispatchError("herdr_attachment protocol must be at least 19")
     version = attachment.get("herdr_version")
     if not isinstance(version, str) or not version.strip():
         raise DispatchError("herdr_attachment herdr_version must be a non-empty string")
+    launch_fields = {"terminal_id", "resume_argv_sha256"}
+    if launch_fields.intersection(attachment):
+        if not launch_fields.issubset(attachment):
+            raise DispatchError("herdr_attachment launch evidence is incomplete")
+        _validated_herdr_identifier(
+            attachment["terminal_id"], "herdr_attachment.terminal_id"
+        )
+        digest = attachment["resume_argv_sha256"]
+        if not isinstance(digest, str) or not re.fullmatch(r"[0-9a-f]{64}", digest):
+            raise DispatchError("herdr_attachment resume_argv_sha256 is invalid")
+    runtime_fields = {
+        "model",
+        "thinking",
+        "configuration_mode",
+        "permission_profile",
+        "sandbox_mode",
+        "approval_policy",
+    }
+    if runtime_fields.intersection(attachment):
+        missing = runtime_fields - set(attachment)
+        if missing:
+            raise DispatchError(
+                "herdr_attachment runtime evidence is incomplete: "
+                + ", ".join(sorted(missing))
+            )
+        _validated_verification_inputs(
+            thread_id=thread_id,
+            expected_runtime_project_id=runtime_project_id,
+            cwd=worker_cwd,
+            model=attachment["model"],
+            thinking=attachment["thinking"],
+            configuration_mode=attachment["configuration_mode"],
+            approval_policy=attachment["approval_policy"],
+            permission_profile=attachment["permission_profile"],
+            sandbox_mode=attachment["sandbox_mode"],
+        )
     return attachment
 
 
@@ -877,11 +1533,16 @@ def cleanup_herdr_worker(
     mode: str,
     herdr_attachment: Dict[str, Any],
     remove_worktree: bool,
+    authorized: bool,
     codex_executable: Optional[str] = None,
     herdr_executable: Optional[str] = None,
 ) -> Dict[str, Any]:
     """Close only an owned completed Herdr attachment and archive its exact task."""
     _require_herdr_environment()
+    if authorized is not True:
+        raise DispatchError(
+            "authorized must be true after an explicit Kepler cleanup authorization"
+        )
     if mode not in WORKER_MODES:
         raise DispatchError("mode must be one of: " + ", ".join(sorted(WORKER_MODES)))
     if not isinstance(remove_worktree, bool):
@@ -905,6 +1566,18 @@ def cleanup_herdr_worker(
     codex = _resolve_codex_executable(codex_executable)
     herdr_capability = _verify_herdr_capability(herdr)
 
+    shared_workspace = attachment.get("attachment_mode") == "shared-control-workspace"
+    if shared_workspace:
+        control = _current_herdr_control_pane(herdr)
+        if (
+            control["workspace_id"] != attachment["workspace_id"]
+            or control["tab_id"] != attachment["control_tab_id"]
+            or control["pane_id"] != attachment["control_pane_id"]
+        ):
+            raise DispatchError(
+                "cleanup must run from the receipt-bound Herdr control agent"
+            )
+
     agent = _herdr_agent_info(herdr, attachment["agent_name"])
     _validate_herdr_agent(
         agent,
@@ -915,29 +1588,33 @@ def cleanup_herdr_worker(
         worker_cwd=worker_value,
         thread_id=thread_id,
         require_terminal_state=True,
+        terminal_id=attachment.get("terminal_id"),
     )
-    with AppServerClient(codex) as client:
-        resumed = client.request("thread/resume", {"threadId": thread_id})
-    resumed_thread = resumed.get("thread")
-    if not isinstance(resumed_thread, dict) or resumed_thread.get("id") != thread_id:
-        raise DispatchError("thread/resume did not return the exact cleanup task")
-    if resumed_thread.get("projectId") != runtime_project_id:
-        raise DispatchError("thread/resume projectId does not match cleanup project")
-    try:
-        resumed_cwd = str(Path(resumed.get("cwd", "")).expanduser().resolve(strict=True))
-    except (OSError, RuntimeError):
-        raise DispatchError("thread/resume did not return a resolvable cleanup cwd")
-    if resumed_cwd != worker_value:
-        raise DispatchError("thread/resume cwd does not match cleanup worker path")
-    status = resumed_thread.get("status")
-    if not isinstance(status, dict) or status.get("type") != "idle":
+    cleanup_thread = _read_thread(codex, thread_id, include_turns=True)
+    cleanup_association = _verified_thread_association(
+        cleanup_thread,
+        expected_runtime_project_id=runtime_project_id,
+        cwd=worker_value,
+    )
+    status = cleanup_thread.get("status")
+    latest_turn = cleanup_association["turns"][-1] if cleanup_association["turns"] else None
+    latest_turn_completed = (
+        isinstance(latest_turn, dict) and latest_turn.get("status") == "completed"
+    )
+    if (
+        not isinstance(status, dict)
+        or (status.get("type") != "idle" and not latest_turn_completed)
+    ):
         raise DispatchError("Codex worker is active or not idle")
 
     worker_head: Optional[str] = None
     if mode == "worktree" and remove_worktree:
         worker_head = _worktree_safety_snapshot(project_value, worker_value)
 
-    _close_herdr_workspace(herdr, attachment["workspace_id"])
+    if shared_workspace:
+        _close_herdr_tab(herdr, attachment["tab_id"])
+    else:
+        _close_herdr_workspace(herdr, attachment["workspace_id"])
     with AppServerClient(codex) as client:
         client.request("thread/archive", {"threadId": thread_id})
     worktree_removed = False
@@ -947,20 +1624,31 @@ def cleanup_herdr_worker(
             raise DispatchError("worker worktree HEAD changed during cleanup")
         _run_git(["worktree", "remove", worker_value], cwd=project_value)
         worktree_removed = True
-    return {
-        "schemaVersion": "kepler.worker-cleanup/v1",
+    result = {
+        "schemaVersion": (
+            "kepler.worker-cleanup/v2" if shared_workspace else "kepler.worker-cleanup/v1"
+        ),
         "taskId": thread_id,
         "runtimeProjectId": runtime_project_id,
         "projectPath": project_value,
         "workerCwd": worker_value,
         "mode": mode,
         "herdrAttachment": attachment,
-        "herdrWorkspaceClosed": True,
         "taskArchived": True,
         "removeWorktreeRequested": remove_worktree,
         "worktreeRemoved": worktree_removed,
         "branchPreserved": True,
     }
+    if shared_workspace:
+        result.update(
+            {
+                "herdrWorkspacePreserved": True,
+                "herdrWorkerTabClosed": True,
+            }
+        )
+    else:
+        result["herdrWorkspaceClosed"] = True
+    return result
 
 
 def bootstrap_planner_task(
@@ -1016,6 +1704,42 @@ def bootstrap_planner_task(
     receipt["role"] = "sol"
     return receipt
 
+
+LIST_CLI_PROJECTS_TOOL = {
+    "name": "list_cli_projects",
+    "description": (
+        "List the persistent saved-project registry owned by the local Codex CLI. "
+        "Use this in Herdr setup instead of any Codex desktop-app project surface. "
+        "The tool is read-only and returns opaque IDs plus exact normalized roots."
+    ),
+    "inputSchema": {
+        "type": "object",
+        "additionalProperties": False,
+        "properties": {},
+    },
+}
+
+REGISTER_CLI_PROJECT_TOOL = {
+    "name": "register_cli_project",
+    "description": (
+        "Idempotently register one explicitly confirmed exact repository path in "
+        "the persistent local Codex CLI project registry. This creates only a CLI "
+        "project record; it does not edit, clone, move, or scan the repository."
+    ),
+    "inputSchema": {
+        "type": "object",
+        "additionalProperties": False,
+        "required": ["cwd", "name", "confirmed"],
+        "properties": {
+            "cwd": {"type": "string", "description": "Exact repository path."},
+            "name": {"type": "string", "minLength": 1, "maxLength": 120},
+            "confirmed": {
+                "const": True,
+                "description": "True only after the user confirms this exact path.",
+            },
+        },
+    },
+}
 
 WORKER_TOOL = {
     "name": "bootstrap_worker_task",
@@ -1212,9 +1936,11 @@ CLEANUP_HERDR_WORKER_TOOL = {
     "name": "cleanup_herdr_worker",
     "description": (
         "Fail-closed cleanup for one owned, idle or done Herdr worker attachment. "
-        "The tool closes only the recorded workspace, archives only the exact Codex "
+        "It requires explicit cleanup authorization, preserves a shared control "
+        "workspace, closes only the recorded worker tab, archives only the exact Codex "
         "task, and removes a worktree only after clean registered-and-merged checks. "
-        "Local mode never removes a path or branch."
+        "Legacy owned worker workspaces remain supported. Local mode never removes "
+        "a path or branch."
     ),
     "inputSchema": {
         "type": "object",
@@ -1227,6 +1953,7 @@ CLEANUP_HERDR_WORKER_TOOL = {
             "mode",
             "herdr_attachment",
             "remove_worktree",
+            "authorized",
         ],
         "properties": {
             "thread_id": {"type": "string", "minLength": 1},
@@ -1236,15 +1963,97 @@ CLEANUP_HERDR_WORKER_TOOL = {
             "mode": {"type": "string", "enum": sorted(WORKER_MODES)},
             "herdr_attachment": {"type": "object", "minProperties": 1},
             "remove_worktree": {"type": "boolean"},
+            "authorized": {
+                "const": True,
+                "description": "True only after the user explicitly invoked Kepler cleanup authorize.",
+            },
+        },
+    },
+}
+
+DELIVER_HERDR_WORKER_PROMPT_TOOL = {
+    "name": "deliver_herdr_worker_prompt",
+    "description": (
+        "Submit one exact serialized ContextPack prompt to an already-attached "
+        "Herdr Codex worker without the Codex desktop app or browser controls. "
+        "The tool verifies the same task, CLI project ID, path, and Herdr terminal "
+        "before and after submission, detects exact duplicate prompts, and returns "
+        "a bounded delivery receipt without monitoring worker completion."
+    ),
+    "inputSchema": {
+        "type": "object",
+        "additionalProperties": False,
+        "required": [
+            "thread_id",
+            "expected_runtime_project_id",
+            "cwd",
+            "delivery_id",
+            "prompt",
+            "herdr_attachment",
+        ],
+        "properties": {
+            "thread_id": {"type": "string", "minLength": 1},
+            "expected_runtime_project_id": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 512,
+            },
+            "cwd": {"type": "string", "description": "Exact worker path."},
+            "delivery_id": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 200,
+                "pattern": "^[A-Za-z0-9_.:+-]+$",
+            },
+            "prompt": {"type": "string", "minLength": 1},
+            "herdr_attachment": {"type": "object", "minProperties": 1},
+            "require_empty": {
+                "type": "boolean",
+                "default": True,
+                "description": "True for initial dispatch; false only for continuation.",
+            },
+        },
+    },
+}
+
+COLLECT_HERDR_WORKER_RESULT_TOOL = {
+    "name": "collect_herdr_worker_result",
+    "description": (
+        "Read only the latest terminal final response from an exact completed "
+        "Herdr worker task. The tool verifies the same CLI project, path, task, "
+        "and Herdr attachment and never returns progress or transcript content."
+    ),
+    "inputSchema": {
+        "type": "object",
+        "additionalProperties": False,
+        "required": [
+            "thread_id",
+            "expected_runtime_project_id",
+            "cwd",
+            "herdr_attachment",
+        ],
+        "properties": {
+            "thread_id": {"type": "string", "minLength": 1},
+            "expected_runtime_project_id": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 512,
+            },
+            "cwd": {"type": "string", "description": "Exact worker path."},
+            "herdr_attachment": {"type": "object", "minProperties": 1},
         },
     },
 }
 
 TOOLS = (
+    LIST_CLI_PROJECTS_TOOL,
+    REGISTER_CLI_PROJECT_TOOL,
     PLANNER_TOOL,
     WORKER_TOOL,
     VERIFY_WORKER_TOOL,
     HERDR_ATTACHMENT_TOOL,
+    DELIVER_HERDR_WORKER_PROMPT_TOOL,
+    COLLECT_HERDR_WORKER_RESULT_TOOL,
     CLEANUP_HERDR_WORKER_TOOL,
 )
 
@@ -1285,7 +2094,13 @@ def _handle_request(message: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         arguments = params.get("arguments")
         if not isinstance(arguments, dict):
             raise DispatchError("tool arguments must be an object")
-        if tool_name == WORKER_TOOL["name"]:
+        if tool_name == LIST_CLI_PROJECTS_TOOL["name"]:
+            allowed = set()
+            function = list_cli_projects
+        elif tool_name == REGISTER_CLI_PROJECT_TOOL["name"]:
+            allowed = {"cwd", "name", "confirmed"}
+            function = register_cli_project
+        elif tool_name == WORKER_TOOL["name"]:
             allowed = {
                 "cwd",
                 "expected_runtime_project_id",
@@ -1344,8 +2159,28 @@ def _handle_request(message: Dict[str, Any]) -> Optional[Dict[str, Any]]:
                 "mode",
                 "herdr_attachment",
                 "remove_worktree",
+                "authorized",
             }
             function = cleanup_herdr_worker
+        elif tool_name == DELIVER_HERDR_WORKER_PROMPT_TOOL["name"]:
+            allowed = {
+                "thread_id",
+                "expected_runtime_project_id",
+                "cwd",
+                "delivery_id",
+                "prompt",
+                "herdr_attachment",
+                "require_empty",
+            }
+            function = deliver_herdr_worker_prompt
+        elif tool_name == COLLECT_HERDR_WORKER_RESULT_TOOL["name"]:
+            allowed = {
+                "thread_id",
+                "expected_runtime_project_id",
+                "cwd",
+                "herdr_attachment",
+            }
+            function = collect_herdr_worker_result
         else:
             raise DispatchError("unknown tool")
         unexpected = set(arguments) - allowed

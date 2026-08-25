@@ -4,7 +4,8 @@
 - `/kepler plan`: create or revise a Plan; may read evidence but cannot dispatch or edit connected repositories.
 - `/kepler dispatch`: from the current control task, dispatch ready units from one identified Plan revision directly into their owning projects; intermediary dispatcher tasks, project reassociation, stale revisions, and unresolved targets fail closed.
 - `/kepler status`: show revision, dependencies, receipts, results, blockers, validation, and ready units.
-- `/kepler cleanup`: after terminal WorkerResults are ingested, close and archive only receipt-owned worker resources; remove only safe merged Worktrees and preserve branches.
+- `/kepler cleanup`: preview the exact receipt-owned worker tabs, tasks, and safe merged Worktrees; perform no mutation.
+- `/kepler cleanup authorize`: apply the unchanged cleanup preview once, preserving the control workspace and branches.
 - `/kepler review`: create a findings-first review Plan without implementation.
 - `/kepler doctor`: run read-only integrity, identity, path, schema, and dispatch-capability checks.
 

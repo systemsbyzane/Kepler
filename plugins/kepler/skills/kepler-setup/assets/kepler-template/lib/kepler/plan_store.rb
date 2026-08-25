@@ -172,6 +172,8 @@ module Kepler
           "mode" => target.fetch("mode"),
           "herdr_attachment" => target.fetch("herdr_attachment"),
           "requested_action" => cleanup_action(target, preserve_worktrees: preserve_worktrees),
+          "authorization_required" => true,
+          "authorization_command" => "$kepler cleanup authorize",
           "receipt_and_stop" => true
         }
       end
@@ -182,6 +184,10 @@ module Kepler
         "kind" => "CleanupEnvelopeList",
         "plan_id" => id,
         "plan_revision" => revision.to_i,
+        "preview_only" => true,
+        "mutations_performed" => false,
+        "authorization_required" => true,
+        "authorization_command" => "$kepler cleanup authorize",
         "units" => envelopes
       }
     end
@@ -352,8 +358,11 @@ module Kepler
     end
 
     def cleanup_action(target, preserve_worktrees:)
+      shared_workspace = target.dig("herdr_attachment", "attachment_mode") == "shared-control-workspace"
       {
-        "close_herdr_workspace" => true,
+        "close_herdr_workspace" => !shared_workspace,
+        "close_herdr_worker_tab" => shared_workspace,
+        "preserve_control_workspace" => shared_workspace,
         "archive_task" => true,
         "remove_worktree" => target["mode"] == "worktree" && !preserve_worktrees,
         "preserve_branch" => true
@@ -364,7 +373,7 @@ module Kepler
       raise ValidationError, "CleanupReceipt must be a mapping" unless raw.is_a?(Hash)
       return raw unless raw.key?("schemaVersion")
 
-      expected = %w[schemaVersion taskId runtimeProjectId projectPath workerCwd mode herdrAttachment herdrWorkspaceClosed taskArchived removeWorktreeRequested worktreeRemoved branchPreserved]
+      expected = %w[schemaVersion taskId runtimeProjectId projectPath workerCwd mode herdrAttachment herdrWorkspaceClosed herdrWorkspacePreserved herdrWorkerTabClosed taskArchived removeWorktreeRequested worktreeRemoved branchPreserved]
       unknown = raw.keys - expected
       raise ValidationError, "CleanupReceipt has unsupported Python result fields: #{unknown.join(', ')}" unless unknown.empty?
       {
@@ -376,11 +385,13 @@ module Kepler
         "mode" => raw["mode"],
         "herdr_attachment" => raw["herdrAttachment"],
         "herdr_workspace_closed" => raw["herdrWorkspaceClosed"],
+        "herdr_workspace_preserved" => raw["herdrWorkspacePreserved"],
+        "herdr_worker_tab_closed" => raw["herdrWorkerTabClosed"],
         "task_archived" => raw["taskArchived"],
         "remove_worktree_requested" => raw["removeWorktreeRequested"],
         "worktree_removed" => raw["worktreeRemoved"],
         "branch_preserved" => raw["branchPreserved"]
-      }
+      }.compact
     end
 
     def validate_cleanup_plan_fields!(raw, id:, revision:, unit_id:)
@@ -415,7 +426,9 @@ module Kepler
     end
 
     def validate_cleanup_action!(receipt, action)
-      unless receipt["herdr_workspace_closed"] == action["close_herdr_workspace"] &&
+      unless !!receipt["herdr_workspace_closed"] == action["close_herdr_workspace"] &&
+             !!receipt["herdr_worker_tab_closed"] == action["close_herdr_worker_tab"] &&
+             !!receipt["herdr_workspace_preserved"] == action["preserve_control_workspace"] &&
              receipt["task_archived"] == action["archive_task"] &&
              receipt["remove_worktree_requested"] == action["remove_worktree"] &&
              receipt["branch_preserved"] == action["preserve_branch"]
@@ -522,6 +535,8 @@ module Kepler
         "cleanup_receipt" => unit["cleanup_receipt"],
         "cleanup" => cleanup && {
           "herdr_workspace_closed" => cleanup["herdr_workspace_closed"],
+          "herdr_workspace_preserved" => cleanup["herdr_workspace_preserved"],
+          "herdr_worker_tab_closed" => cleanup["herdr_worker_tab_closed"],
           "task_archived" => cleanup["task_archived"],
           "remove_worktree_requested" => cleanup["remove_worktree_requested"],
           "worktree_removed" => cleanup["worktree_removed"],

@@ -27,7 +27,7 @@
     "configuration_verified_task_id": {"type": "string", "minLength": 1},
     "configuration_verified_before_prompt": {"const": true},
     "configuration_verified_runtime_project_id": {"type": "string", "minLength": 1},
-    "post_delivery_project_verification_schema_version": {"const": "kepler.worker-task-verification/v1"},
+    "post_delivery_project_verification_schema_version": {"enum": ["kepler.worker-task-verification/v1", "kepler.herdr-prompt-delivery/v1"]},
     "post_delivery_project_verified": {"const": true},
     "post_delivery_project_verified_task_id": {"type": "string", "minLength": 1},
     "post_delivery_verified_runtime_project_id": {"type": "string", "minLength": 1},
@@ -48,8 +48,12 @@
     "intermediary_dispatch_task_created": {"const": false},
     "dispatch_owner_task_id": {"type": "string", "minLength": 1},
     "dispatch_owner_project_path": {"type": "string", "minLength": 1},
-    "prompt_delivery_method": {"const": "codex-thread-message"},
-    "project_association_verification_source": {"const": "live-project-and-task-list"},
+    "prompt_delivery_method": {"enum": ["codex-thread-message", "herdr-agent-prompt"]},
+    "project_association_verification_source": {"enum": ["live-project-and-task-list", "cli-app-server-and-herdr-terminal"]},
+    "prompt_delivery_schema_version": {"const": "kepler.herdr-prompt-delivery/v1"},
+    "prompt_delivery_id": {"type": "string", "minLength": 1},
+    "prompt_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "prompt_bytes": {"type": "integer", "minimum": 1},
     "project_association_before": {"$ref": "#/$defs/projectAssociation"},
     "project_association_after": {"$ref": "#/$defs/projectAssociation"},
     "herdr_attachment": {"$ref": "#/$defs/herdrAttachment"},
@@ -57,6 +61,33 @@
     "plan_revision": {"type": "integer", "minimum": 1},
     "unit_id": {"type": "string"}
   },
+  "allOf": [
+    {
+      "if": {
+        "properties": {"prompt_delivery_method": {"const": "herdr-agent-prompt"}},
+        "required": ["prompt_delivery_method"]
+      },
+      "then": {
+        "required": ["herdr_attachment", "prompt_delivery_schema_version", "prompt_delivery_id", "prompt_sha256", "prompt_bytes"],
+        "properties": {
+          "post_delivery_project_verification_schema_version": {"const": "kepler.herdr-prompt-delivery/v1"},
+          "project_association_verification_source": {"const": "cli-app-server-and-herdr-terminal"},
+          "herdr_attachment": {
+            "allOf": [
+              {"$ref": "#/$defs/herdrAttachment"},
+              {
+                "required": ["attachment_mode", "control_tab_id", "control_pane_id", "terminal_id", "resume_argv_sha256"],
+                "properties": {
+                  "attachment_mode": {"const": "shared-control-workspace"},
+                  "workspace_owned": {"const": false}
+                }
+              }
+            ]
+          }
+        }
+      }
+    }
+  ],
   "$defs": {
     "projectAssociation": {
       "type": "object",
@@ -81,12 +112,28 @@
         "pane_id": {"type": "string", "minLength": 1},
         "agent_name": {"type": "string", "minLength": 1},
         "agent_kind": {"const": "codex"},
+        "attachment_mode": {"const": "shared-control-workspace"},
+        "control_tab_id": {"type": "string", "minLength": 1},
+        "control_pane_id": {"type": "string", "minLength": 1},
+        "terminal_id": {"type": "string", "minLength": 1},
+        "resume_argv_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
         "resumed_task_id": {"type": "string", "minLength": 1},
         "worker_cwd": {"type": "string", "minLength": 1},
-        "workspace_owned": {"const": true},
+        "workspace_owned": {"type": "boolean"},
         "tab_owned": {"const": true},
         "pane_owned": {"const": true},
-        "agent_owned": {"const": true}
+        "agent_owned": {"const": true},
+        "model": {"type": "string", "minLength": 1},
+        "thinking": {"type": "string", "minLength": 1},
+        "configuration_mode": {"enum": ["global-config", "permission-profile"]},
+        "permission_profile": {"type": ["string", "null"]},
+        "sandbox_mode": {"type": ["string", "null"]},
+        "approval_policy": {
+          "oneOf": [
+            {"type": "string", "minLength": 1},
+            {"type": "object", "minProperties": 1}
+          ]
+        }
       }
     }
   }

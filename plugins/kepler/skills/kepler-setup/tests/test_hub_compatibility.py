@@ -56,13 +56,14 @@ class HubCompatibilityTest(unittest.TestCase):
             "kepler.command.setup-plan.v1",
             "kepler.command.setup-apply.v2",
             "kepler.command.control-task-dispatch.v1",
+            "kepler.command.cli-herdr-dispatch.v1",
             "kepler.document.change-review.v1",
         )
 
         self.assertEqual(0, result.returncode, result.stderr)
         self.assertEqual("compatible", report["status"])
         self.assertTrue(report["compatible"])
-        self.assertEqual("1.1.1", report["hub"]["identity"]["template_version"])
+        self.assertEqual("1.1.2", report["hub"]["identity"]["template_version"])
         self.assertEqual([], report["requirements"]["missing"])
 
     def test_legacy_hub_missing_setup_command_returns_migration_plan(self) -> None:

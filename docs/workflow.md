@@ -7,9 +7,9 @@
 5. Workers return validated WorkerResults at completion or a material blocker.
 6. `/kepler status` derives state and newly ready units from the Plan, receipts, and results.
 7. Repeat dispatch until required evidence is complete.
-8. `/kepler cleanup` closes and archives only receipt-owned terminal workers and safely removes already-merged Worktrees while preserving their branches and all structured evidence.
+8. `/kepler cleanup` previews the exact receipt-owned tabs, tasks, and safe Worktrees. `/kepler cleanup authorize` applies that unchanged preview once while preserving the control workspace, every branch, and all structured evidence.
 
 No command replays full transcripts or silently changes a Plan revision.
-When the control task runs inside Herdr, each verified Codex worker may be
-attached to an owned Herdr workspace before prompt delivery. This changes only
+When the control task runs inside Herdr, each verified Codex worker is attached
+to an owned tab in the current Herdr workspace before prompt delivery. This changes only
 where the same task is visible, not routing, status, dependencies, or results.
