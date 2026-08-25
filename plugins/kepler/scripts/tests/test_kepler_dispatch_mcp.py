@@ -110,26 +110,38 @@ for line in sys.stdin:
             "instructionSources": [params["cwd"] + "/AGENTS.md"],
         }
     elif method == "thread/resume":
+        params = message["params"]
         active_profile = os.environ.get("FAKE_RESUME_PROFILE")
+        if active_profile is None:
+            active_profile = params.get("permissions")
+        sandbox_mode = params.get("sandbox", "danger-full-access")
+        sandbox_receipt = {
+            "danger-full-access": "dangerFullAccess",
+            "workspace-write": "workspaceWrite",
+            "read-only": "readOnly",
+        }[sandbox_mode]
         result = {
             "thread": {
-                "id": message["params"]["threadId"],
+                "id": params["threadId"],
                 "projectId": os.environ.get("FAKE_RESUME_PROJECT_ID", "project-a"),
                 "turns": ["existing-turn"] if os.environ.get("FAKE_RESUME_NONEMPTY") else [],
                 "status": {"type": "active" if os.environ.get("FAKE_RESUME_ACTIVE") else "idle"},
             },
-            "model": os.environ.get("FAKE_RESUME_MODEL", "gpt-5.6-terra"),
-            "cwd": os.environ["FAKE_PROJECT_CWD"],
-            "reasoningEffort": os.environ.get("FAKE_RESUME_THINKING", "high"),
+            "model": os.environ.get("FAKE_RESUME_MODEL", params.get("model", "gpt-5.6-sol")),
+            "cwd": params.get("cwd", os.environ["FAKE_PROJECT_CWD"]),
+            "reasoningEffort": os.environ.get(
+                "FAKE_RESUME_THINKING",
+                params.get("config", {}).get("model_reasoning_effort"),
+            ),
             "activePermissionProfile": (
                 {"id": active_profile} if active_profile else None
             ),
             "approvalPolicy": os.environ.get(
-                "FAKE_RESUME_APPROVAL", "on-request"
+                "FAKE_RESUME_APPROVAL", params.get("approvalPolicy", "on-request")
             ),
             "sandbox": {
                 "type": os.environ.get(
-                    "FAKE_RESUME_SANDBOX", "dangerFullAccess"
+                    "FAKE_RESUME_SANDBOX", sandbox_receipt
                 )
             },
         }
@@ -589,6 +601,29 @@ class KeplerDispatchMcpTest(unittest.TestCase):
         self.assertEqual(PROJECT_ID, created["actualRuntimeProjectId"])
         self.assertEqual(PROJECT_ID, continued["actualRuntimeProjectId"])
         self.assertFalse(continued["empty"])
+
+    def test_empty_worker_verification_reapplies_terra_runtime(self) -> None:
+        with mock.patch.dict(
+            os.environ,
+            {"FAKE_PROJECT_CWD": str(self.project)},
+            clear=False,
+        ):
+            verified = MODULE.verify_worker_task(
+                thread_id="thread-test",
+                expected_runtime_project_id=PROJECT_ID,
+                cwd=str(self.project),
+                model="gpt-5.6-terra",
+                thinking="high",
+                configuration_mode="global-config",
+                approval_policy="on-request",
+                sandbox_mode="danger-full-access",
+                require_empty=True,
+                codex_executable=str(self.fake_codex),
+            )
+        self.assertTrue(verified["verified"])
+        self.assertTrue(verified["empty"])
+        self.assertEqual("gpt-5.6-terra", verified["model"])
+        self.assertEqual("high", verified["thinking"])
 
     def test_continuation_fails_closed_on_project_reassociation(self) -> None:
         with mock.patch.dict(

@@ -19,7 +19,7 @@ from typing import Any, Dict, Iterable, Optional
 
 
 SERVER_NAME = "kepler-dispatch"
-SERVER_VERSION = "1.1.2"
+SERVER_VERSION = "1.1.3"
 DEFAULT_TIMEOUT_SECONDS = 20.0
 HERDR_TIMEOUT_SECONDS = 45.0
 PROMPT_DELIVERY_TIMEOUT_SECONDS = 8.0
@@ -885,8 +885,19 @@ def verify_worker_task(
         sandbox_mode=sandbox_mode,
     )
     executable = _resolve_codex_executable(codex_executable)
+    resume_params: Dict[str, Any] = {
+        "threadId": values["thread_id"],
+        "cwd": values["cwd"],
+        "model": values["model"],
+        "config": {"model_reasoning_effort": values["thinking"]},
+        "approvalPolicy": values["approval_policy"],
+    }
+    if values["configuration_mode"] == "permission-profile":
+        resume_params["permissions"] = values["permission_profile"]
+    else:
+        resume_params["sandbox"] = values["sandbox_mode"]
     with AppServerClient(executable) as client:
-        result = client.request("thread/resume", {"threadId": values["thread_id"]})
+        result = client.request("thread/resume", resume_params)
 
     thread = result.get("thread")
     if not isinstance(thread, dict) or thread.get("id") != values["thread_id"]:

@@ -122,7 +122,7 @@ control project plus selected synthetic project state.
    does not use this refresh command.
 3. Run `codex plugin add kepler@kepler-team --json` without removing the prior
    plugin and without running setup or bootstrap.
-4. Verify installed version `1.1.2`, start a fresh task, and prove the target
+4. Verify installed version `1.1.3`, start a fresh task, and prove the target
    Kepler skills load.
 5. Re-run the preservation checks and require unchanged control-project Git
    status, selected-project Git status, and ignored state plus a passing Doctor.

@@ -275,6 +275,20 @@
         "Run /kepler setup in Herdr, explicitly confirm any missing exact project paths, and replace desktop-only opaque IDs with CLI project IDs.",
         "Migrate the preserved control project to capability kepler.command.cli-herdr-dispatch.v1 before dispatch; plugin upgrade alone does not rewrite Hub state."
       ]
+    },
+    {
+      "version": "1.1.3",
+      "date": "2026-08-25",
+      "summary": "Codex CLI Terra runtime preservation during worker verification.",
+      "changes": [
+        {"category": "fixed", "text": "Reapplied the requested worker model, reasoning effort, exact cwd, approval policy, and sandbox or permission profile when resuming an empty CLI worker for mandatory pre-prompt verification."},
+        {"category": "fixed", "text": "Prevented the CLI verifier from falling back to the Sol control-agent model before Herdr attachment."}
+      ],
+      "breaking_changes": [],
+      "migration": [
+        "Start a fresh Herdr control task after upgrading so the Kepler 1.1.3 MCP server loads.",
+        "No generated-Hub migration is required when the Hub already declares kepler.command.cli-herdr-dispatch.v1."
+      ]
     }
   ]
 }

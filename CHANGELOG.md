@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.1.3 - Unreleased
+
+- Preserved the requested worker model, reasoning level, path, and effective
+  permissions when the Codex CLI resumes an empty worker for mandatory
+  pre-prompt verification.
+- Added a live-regression fixture that defaults resumed tasks to Sol unless
+  Kepler explicitly reapplies the Terra runtime contract.
+
 ## 1.1.2 - Unreleased
 
 - Added a persistent Codex CLI project catalog and explicitly confirmed CLI
