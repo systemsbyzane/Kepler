@@ -19,10 +19,13 @@ from typing import Any, Dict, Iterable, Optional
 
 
 SERVER_NAME = "kepler-dispatch"
-SERVER_VERSION = "1.1.3"
+SERVER_VERSION = "1.1.4"
 DEFAULT_TIMEOUT_SECONDS = 20.0
 HERDR_TIMEOUT_SECONDS = 45.0
 PROMPT_DELIVERY_TIMEOUT_SECONDS = 8.0
+HERDR_AGENT_START_TIMEOUT_MS = 30_000
+HERDR_PANE_BUSY_GRACE_SECONDS = 5.0
+HERDR_PANE_BUSY_INTERVAL_SECONDS = 0.1
 MAX_PROMPT_BYTES = 262_144
 THINKING_LEVELS = {"low", "medium", "high", "xhigh", "max", "ultra"}
 SAFE_IDENTIFIER = re.compile(r"^[A-Za-z0-9_.:+-]+$")
@@ -135,9 +138,11 @@ def _prompt_sha256(prompt: str) -> str:
     return hashlib.sha256(prompt.encode("utf-8")).hexdigest()
 
 
-def _run_herdr_json(executable: str, arguments: list[str]) -> Dict[str, Any]:
+def _execute_herdr(
+    executable: str, arguments: list[str]
+) -> subprocess.CompletedProcess[str]:
     try:
-        completed = subprocess.run(
+        return subprocess.run(
             [executable, *arguments],
             check=False,
             capture_output=True,
@@ -146,6 +151,11 @@ def _run_herdr_json(executable: str, arguments: list[str]) -> Dict[str, Any]:
         )
     except (OSError, subprocess.TimeoutExpired) as error:
         raise DispatchError(f"Herdr command failed to run: {error}") from error
+
+
+def _decode_herdr_json(
+    completed: subprocess.CompletedProcess[str],
+) -> Dict[str, Any]:
     if completed.returncode != 0:
         diagnostic = completed.stderr.strip() or completed.stdout.strip()
         raise DispatchError(f"Herdr command failed: {diagnostic or completed.returncode}")
@@ -161,12 +171,51 @@ def _run_herdr_json(executable: str, arguments: list[str]) -> Dict[str, Any]:
     return payload
 
 
+def _run_herdr_json(executable: str, arguments: list[str]) -> Dict[str, Any]:
+    return _decode_herdr_json(_execute_herdr(executable, arguments))
+
+
+def _herdr_error_code(stderr: str) -> Optional[str]:
+    try:
+        payload = json.loads(stderr)
+    except json.JSONDecodeError:
+        return None
+    if not isinstance(payload, dict):
+        return None
+    error = payload.get("error")
+    if not isinstance(error, dict):
+        return None
+    code = error.get("code")
+    return code if isinstance(code, str) else None
+
+
 def _run_herdr(executable: str, arguments: list[str]) -> Dict[str, Any]:
     payload = _run_herdr_json(executable, arguments)
     result = payload.get("result")
     if not isinstance(result, dict):
         raise DispatchError("Herdr command returned an invalid protocol response")
     return result
+
+
+def _start_herdr_agent(executable: str, arguments: list[str]) -> Dict[str, Any]:
+    """Retry only a settling root pane, reusing the exact start request."""
+    busy_deadline: Optional[float] = None
+    while True:
+        completed = _execute_herdr(executable, arguments)
+        if completed.returncode == 0:
+            payload = _decode_herdr_json(completed)
+            result = payload.get("result")
+            if not isinstance(result, dict):
+                raise DispatchError("Herdr command returned an invalid protocol response")
+            return result
+        if _herdr_error_code(completed.stderr) != "agent_pane_busy":
+            _decode_herdr_json(completed)
+        if busy_deadline is None:
+            busy_deadline = time.monotonic() + HERDR_PANE_BUSY_GRACE_SECONDS
+        remaining = busy_deadline - time.monotonic()
+        if remaining <= 0:
+            _decode_herdr_json(completed)
+        time.sleep(min(HERDR_PANE_BUSY_INTERVAL_SECONDS, remaining))
 
 
 def _herdr_agent_info(executable: str, target: str) -> Dict[str, Any]:
@@ -1088,7 +1137,7 @@ def attach_herdr_worker(
             raise DispatchError("Herdr workspace/create did not return a resolvable cwd")
         if created_cwd != association["cwd"]:
             raise DispatchError("Herdr tab/create cwd does not match the exact worker path")
-        started = _run_herdr(
+        started = _start_herdr_agent(
             executable,
             [
                 "agent",
@@ -1098,6 +1147,8 @@ def attach_herdr_worker(
                 HERDR_AGENT_KIND,
                 "--pane",
                 pane_id,
+                "--timeout",
+                str(HERDR_AGENT_START_TIMEOUT_MS),
                 "--",
                 *resume_arguments,
             ],

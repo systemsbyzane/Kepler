@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.1.4 - Unreleased
+
+- Retried only Herdr's structured `agent_pane_busy` response while a newly
+  created worker tab's shell settles, reusing the exact tab, pane, agent name,
+  and Codex resume arguments within a five-second bound.
+- Kept every other Herdr attachment failure fail-closed with owned-tab rollback
+  and no ContextPack delivery or dispatch receipt.
+
 ## 1.1.3 - Unreleased
 
 - Preserved the requested worker model, reasoning level, path, and effective

@@ -57,7 +57,10 @@ Verify the installed enabled record and exact version, then start a fresh task.
    `attach_herdr_worker`. Require one background workspace at the exact worker
    path, one Codex agent whose detected session ID equals the final task ID,
    explicit Terra model, high reasoning, and effective configuration launch
-   arguments, and a strict owned attachment in the DispatchReceipt. A separate task or
+   arguments, and a strict owned attachment in the DispatchReceipt. If Herdr
+   transiently reports structured `agent_pane_busy` while the root shell
+   settles, require bounded retries to reuse the same tab, pane, agent name, and
+   complete resume arguments. A separate task or
    desktop/app-controlled delivery fails acceptance.
 8. Verify Sol used requested/effective `gpt-5.6-sol` evidence and performed
    read-only planning inspection only.
@@ -122,7 +125,7 @@ control project plus selected synthetic project state.
    does not use this refresh command.
 3. Run `codex plugin add kepler@kepler-team --json` without removing the prior
    plugin and without running setup or bootstrap.
-4. Verify installed version `1.1.3`, start a fresh task, and prove the target
+4. Verify installed version `1.1.4`, start a fresh task, and prove the target
    Kepler skills load.
 5. Re-run the preservation checks and require unchanged control-project Git
    status, selected-project Git status, and ignored state plus a passing Doctor.

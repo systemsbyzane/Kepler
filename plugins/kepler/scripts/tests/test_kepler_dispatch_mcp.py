@@ -200,6 +200,22 @@ elif args[:2] == ["tab", "create"]:
 elif args[:2] == ["agent", "start"]:
     if os.environ.get("FAKE_HERDR_START_FAIL"):
         sys.exit(1)
+    error_code = os.environ.get("FAKE_HERDR_START_ERROR_CODE")
+    if error_code:
+        print(json.dumps({"error": {"code": error_code, "message": "synthetic start failure"}}), file=sys.stderr)
+        sys.exit(1)
+    busy_marker = os.environ.get("FAKE_HERDR_BUSY_MARKER")
+    if busy_marker:
+        try:
+            with open(busy_marker, "r", encoding="utf-8") as handle:
+                busy_attempt = int(handle.read())
+        except (FileNotFoundError, ValueError):
+            busy_attempt = 0
+        with open(busy_marker, "w", encoding="utf-8") as handle:
+            handle.write(str(busy_attempt + 1))
+        if busy_attempt < int(os.environ.get("FAKE_HERDR_BUSY_FAILURES", "1")):
+            print(json.dumps({"error": {"code": "agent_pane_busy", "message": "synthetic shell settling"}}), file=sys.stderr)
+            sys.exit(1)
     separator = args.index("--")
     emit({"type": "agent_started", "agent": {"terminal_id": "term1"}, "argv": ["codex", *args[separator + 1:]]})
 elif args[:2] == ["agent", "get"]:
@@ -743,6 +759,8 @@ class KeplerDispatchMcpTest(unittest.TestCase):
                 "codex",
                 "--pane",
                 "w0:p1",
+                "--timeout",
+                "30000",
                 "--",
                 "--no-alt-screen",
                 "-c",
@@ -763,6 +781,69 @@ class KeplerDispatchMcpTest(unittest.TestCase):
         self.assertFalse(any(command[:2] == ["agent", "prompt"] for command in commands))
         self.assertEqual("gpt-5.6-terra", result["model"])
         self.assertEqual("high", result["thinking"])
+
+    def test_attach_herdr_worker_retries_transient_busy_on_same_pane(self) -> None:
+        log = self.root / "herdr.log"
+        marker = self.root / "busy-attempts"
+        with mock.patch.dict(
+            os.environ,
+            {
+                "HERDR_ENV": "1",
+                "FAKE_PROJECT_CWD": str(self.project),
+                "FAKE_HERDR_LOG": str(log),
+                "FAKE_HERDR_BUSY_MARKER": str(marker),
+                "FAKE_HERDR_BUSY_FAILURES": "2",
+            },
+            clear=False,
+        ), mock.patch.object(MODULE, "HERDR_PANE_BUSY_INTERVAL_SECONDS", 0.001):
+            result = self._attach_worker()
+        self.assertEqual("thread-test", result["resumed_task_id"])
+        commands = [json.loads(line) for line in log.read_text(encoding="utf-8").splitlines()]
+        starts = [command for command in commands if command[:2] == ["agent", "start"]]
+        self.assertEqual(3, len(starts))
+        self.assertTrue(all(command == starts[0] for command in starts))
+        self.assertEqual(1, sum(command[:2] == ["tab", "create"] for command in commands))
+        self.assertFalse(any(command[:2] == ["tab", "close"] for command in commands))
+
+    def test_attach_herdr_worker_does_not_retry_other_start_errors(self) -> None:
+        log = self.root / "herdr.log"
+        with mock.patch.dict(
+            os.environ,
+            {
+                "HERDR_ENV": "1",
+                "FAKE_PROJECT_CWD": str(self.project),
+                "FAKE_HERDR_LOG": str(log),
+                "FAKE_HERDR_START_ERROR_CODE": "agent_pane_unavailable",
+            },
+            clear=False,
+        ):
+            with self.assertRaisesRegex(MODULE.DispatchError, "agent_pane_unavailable"):
+                self._attach_worker()
+        commands = [json.loads(line) for line in log.read_text(encoding="utf-8").splitlines()]
+        starts = [command for command in commands if command[:2] == ["agent", "start"]]
+        self.assertEqual(1, len(starts))
+        self.assertEqual(["tab", "close", "w0:t1"], commands[-1])
+
+    def test_attach_herdr_worker_stops_when_busy_grace_expires(self) -> None:
+        log = self.root / "herdr.log"
+        marker = self.root / "busy-attempts"
+        with mock.patch.dict(
+            os.environ,
+            {
+                "HERDR_ENV": "1",
+                "FAKE_PROJECT_CWD": str(self.project),
+                "FAKE_HERDR_LOG": str(log),
+                "FAKE_HERDR_BUSY_MARKER": str(marker),
+                "FAKE_HERDR_BUSY_FAILURES": "100",
+            },
+            clear=False,
+        ), mock.patch.object(MODULE, "HERDR_PANE_BUSY_GRACE_SECONDS", 0.0):
+            with self.assertRaisesRegex(MODULE.DispatchError, "agent_pane_busy"):
+                self._attach_worker()
+        commands = [json.loads(line) for line in log.read_text(encoding="utf-8").splitlines()]
+        starts = [command for command in commands if command[:2] == ["agent", "start"]]
+        self.assertEqual(1, len(starts))
+        self.assertEqual(["tab", "close", "w0:t1"], commands[-1])
 
     def test_attach_herdr_worker_refuses_nonempty_or_wrong_session_and_rolls_back(self) -> None:
         log = self.root / "herdr.log"

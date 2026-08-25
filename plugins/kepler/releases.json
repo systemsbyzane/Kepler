@@ -289,6 +289,21 @@
         "Start a fresh Herdr control task after upgrading so the Kepler 1.1.3 MCP server loads.",
         "No generated-Hub migration is required when the Hub already declares kepler.command.cli-herdr-dispatch.v1."
       ]
+    },
+    {
+      "version": "1.1.4",
+      "date": "2026-08-25",
+      "summary": "Reliable Herdr attachment while a new worker pane settles.",
+      "changes": [
+        {"category": "fixed", "text": "Retried only Herdr's structured agent_pane_busy response for up to five seconds while a newly created worker tab's shell becomes available."},
+        {"category": "fixed", "text": "Reused the exact tab, pane, agent name, and Codex resume arguments on retry without delivering the ContextPack early or creating another workspace."},
+        {"category": "fixed", "text": "Added allowed- and denied-path regressions for transient pane readiness and non-retryable Herdr attachment errors."}
+      ],
+      "breaking_changes": [],
+      "migration": [
+        "Start a fresh Herdr control task after upgrading so the Kepler 1.1.4 MCP server loads.",
+        "No generated-Hub migration is required when the Hub already declares kepler.command.cli-herdr-dispatch.v1."
+      ]
     }
   ]
 }
