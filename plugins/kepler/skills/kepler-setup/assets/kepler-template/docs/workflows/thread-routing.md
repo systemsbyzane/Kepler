@@ -40,15 +40,21 @@ satisfy the Sol runtime contract.
    or Worktree path. Continue existing tasks only through the
    project-preserving Codex task-message surface; never use collaboration-agent
    spawn, delegation, or resume for repository workers.
+   In Herdr, use `list_cli_projects`; desktop-only opaque IDs fail closed.
 9. Record only a receipt whose bootstrap and final verification evidence prove
    the effective model, reasoning, approval, sandbox or permission profile,
    final path, empty pre-prompt state, and control-task dispatch ownership.
 10. Send the serialized ContextPack exactly once with a minimal result wrapper;
    do not repeat Plan or repository context in prose.
-11. Recheck the exact task through `verify_worker_task` with
+11. Outside Herdr, recheck the exact task through `verify_worker_task` with
     `require_empty: false` and recheck the live owning project ID and task path
-    immediately after prompt delivery or continuation. Project reassociation
-    fails dispatch and produces no receipt.
+    immediately after prompt delivery or continuation. In Herdr, attach the
+    exact worker in a new owned tab inside the current control workspace and
+    call `deliver_herdr_worker_prompt`; its persisted prompt, CLI project, task,
+    path, and terminal evidence is the post-delivery check. Never create a
+    separate worker workspace.
+    Browser or desktop-app control is prohibited. Project reassociation fails
+    dispatch and produces no receipt.
 12. Fail closed on missing or mismatched evidence. Do not poll, wait, monitor,
    copy transcripts, or read progress after the verified receipt.
 
@@ -67,6 +73,7 @@ closed on missing or drifting state. Never install a bridge implicitly.
 
 Only a validated WorkerResult advances Plan readiness. `/kepler status` reads
 only a completed task's final response and idempotently ingests the exact
-structured result; it never reads progress or creates a planner. Ingest relevant changes,
+structured result; in Herdr it calls `collect_herdr_worker_result` rather than
+reading terminal output. It never reads progress or creates a planner. Ingest relevant changes,
 discoveries, decisions, failed attempts, validation, blockers, handoffs, and
 artifact references. Do not synchronize the worker transcript.

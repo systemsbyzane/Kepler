@@ -18,12 +18,23 @@ remote, push, publish, or deploy.
 
 ## 2. Select existing saved projects
 
-Call the live Codex project-list capability. Do not scan the filesystem for
-repositories and do not register or open folders as an ordinary setup fallback.
-Show the saved projects with label, opaque ID, exact path, project kind, host,
-and Git-project flag. Obtain the user's selection.
+Call the live Codex project-list capability. In Herdr (`HERDR_ENV=1`), call
+`list_cli_projects`; do not call a desktop-app or browser surface. Outside
+Herdr, use the normal live Codex project list. Do not scan the filesystem for
+repositories or open folders as an ordinary setup fallback. Show the saved
+projects with label, opaque ID, exact path, project kind, host, and Git-project
+flag. Obtain the user's selection.
 
-Store the exact unmodified schema-v2 response in ignored local state, then run:
+The CLI and desktop app have distinct saved-project registries. If a repository
+the user selected by an already-known exact path is absent from the CLI list,
+show that exact path and ask for confirmation. Only after confirmation, call
+`register_cli_project` for that path. This creates a persistent CLI project
+record only; it must not scan, clone, move, open, or edit the repository.
+Refresh `list_cli_projects` and use the returned CLI opaque ID. Never reuse a
+desktop-only project ID in a Herdr ArchitectureMap.
+
+Store the exact unmodified schema-v2 response from the selected runtime in
+ignored local state, then run:
 
 ```text
 bin/kepler setup plan \

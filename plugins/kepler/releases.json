@@ -256,6 +256,25 @@
         "Existing generated control projects remain valid and are not regenerated automatically.",
         "Herdr attachment and cleanup require a newly generated or explicitly migrated control project plus a fresh Codex task started inside Herdr."
       ]
+    },
+    {
+      "version": "1.1.2",
+      "date": "2026-08-24",
+      "summary": "Desktop-independent Codex CLI dispatch and result collection in Herdr.",
+      "changes": [
+        {"category": "added", "text": "Added a persistent Codex CLI project catalog plus explicitly confirmed exact-path project registration for Herdr setup."},
+        {"category": "added", "text": "Added ContextPack delivery through the exact attached Herdr worker with prompt hashing, duplicate suppression, and pre/post CLI task, project, path, and terminal verification."},
+        {"category": "added", "text": "Added final-response-only result collection for completed exact Herdr workers."},
+        {"category": "changed", "text": "Herdr dispatch now creates each worker as an owned tab inside the current control workspace instead of creating a worker workspace."},
+        {"category": "changed", "text": "Cleanup now previews the exact removal set and requires one explicit cleanup authorize before closing worker tabs, archiving tasks, or removing safe Worktrees."},
+        {"category": "fixed", "text": "Removed the Codex desktop app and browser-control dependency from the Herdr dispatch workflow."}
+      ],
+      "breaking_changes": [],
+      "migration": [
+        "Start a fresh Herdr control task after upgrading so the 1.1.2 MCP tool schema loads.",
+        "Run /kepler setup in Herdr, explicitly confirm any missing exact project paths, and replace desktop-only opaque IDs with CLI project IDs.",
+        "Migrate the preserved control project to capability kepler.command.cli-herdr-dispatch.v1 before dispatch; plugin upgrade alone does not rewrite Hub state."
+      ]
     }
   ]
 }

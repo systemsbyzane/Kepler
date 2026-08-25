@@ -7,7 +7,8 @@ not a source monorepo and does not own or contain their repositories.
 
 - `/kepler setup` lists saved Codex projects, lets the user select exact
   project IDs and paths, proposes an ArchitectureMap, and persists it only
-  after explicit confirmation.
+  after explicit confirmation. In Herdr, it uses the CLI project registry and
+  never a desktop-app or browser surface.
 - `/kepler plan` uses Sol on `gpt-5.6-sol`. Sol may inspect selected projects
   read-only while planning. It may write Plan, ContextPack, and scoped memory
   artifacts here, but must not edit a selected project or dispatch work.
@@ -25,18 +26,29 @@ not a source monorepo and does not own or contain their repositories.
   match the verified target. Collaboration-agent spawn, delegation, or
   resume is invalid for repository workers. The control task records requested
   and effective runtime, configuration, and association evidence, returns the
-  receipt, and ends the dispatch turn without monitoring.
+  receipt, and ends the dispatch turn without monitoring. In Herdr, attach the
+  exact worker as a new owned tab in the current control workspace and submit
+  through `deliver_herdr_worker_prompt`; never create another Herdr workspace
+  or connect to or control the Codex desktop app.
 - `/kepler status` may read only the final response of a dispatched task,
   validate and idempotently ingest its exact WorkerResult, and then report
-  structured state. It does not read progress, synchronize transcripts, or
+  structured state. In Herdr it uses `collect_herdr_worker_result`. It does not
+  read progress, synchronize transcripts, or
   create a planner. `/kepler doctor` remains read-only.
+- `/kepler cleanup` is a read-only preview of the exact receipt-owned worker
+  tabs, tasks, and optional Worktrees. Only `/kepler cleanup authorize` applies
+  the unchanged preview with one authorization. Preserve the current workspace,
+  control tab, control agent, and every branch.
 
 Natural language supplies objectives and refinements. It never substitutes for
 an explicit `/kepler` state-changing command.
 
 ## Projects, context, and bridges
 
-Select only projects returned by the live Codex project list. Preserve each
+Select only projects returned by the live Codex project list. In Herdr this is
+`list_cli_projects`; a missing exact path may be registered only after explicit
+confirmation with `register_cli_project`. Desktop and CLI opaque IDs are not
+interchangeable. Preserve each
 opaque runtime project ID separately from its logical Kepler key and require
 an exact normalized path match. Never scan a repository root, clone, move,
 import, or edit selected projects during ordinary setup.

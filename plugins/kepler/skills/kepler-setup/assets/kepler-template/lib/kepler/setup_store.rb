@@ -36,7 +36,7 @@ module Kepler
       {
         "schema_version" => "kepler.setup-plan/v2",
         "read_only" => true,
-        "selection_source" => "codex_app.list_projects",
+        "selection_source" => catalog.fetch("selectionSource", "codex_app.list_projects"),
         "display_name_match_accepted" => false,
         "repository_scan_performed" => false,
         "selected_project_mutation" => false,
@@ -120,6 +120,10 @@ module Kepler
       value = Support.load_data(path)
       raise ValidationError, "project catalog must be a mapping" unless value.is_a?(Hash)
       raise ValidationError, "project catalog schemaVersion must be 2" unless value["schemaVersion"].to_i == 2
+      source = value.fetch("selectionSource", "codex_app.list_projects")
+      unless %w[codex_app.list_projects kepler_dispatch.list_cli_projects].include?(source)
+        raise ValidationError, "project catalog selectionSource is unsupported"
+      end
       projects = value["projects"]
       raise ValidationError, "project catalog projects must be a non-empty array" unless projects.is_a?(Array) && !projects.empty?
       projects.each do |project|

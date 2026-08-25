@@ -157,7 +157,7 @@ module Kepler
       unless value["configuration_verification_schema_version"] == "kepler.worker-task-verification/v1"
         raise ValidationError, "DispatchReceipt configuration verification evidence is unsupported"
       end
-      unless value["post_delivery_project_verification_schema_version"] == "kepler.worker-task-verification/v1"
+      unless %w[kepler.worker-task-verification/v1 kepler.herdr-prompt-delivery/v1].include?(value["post_delivery_project_verification_schema_version"])
         raise ValidationError, "DispatchReceipt post-delivery project verification evidence is unsupported"
       end
       unless value["configuration_verified"] == true && value["configuration_verified_before_prompt"] == true
@@ -187,11 +187,40 @@ module Kepler
       if value["dispatch_owner_task_id"] == value["task_id"]
         raise ValidationError, "DispatchReceipt control task cannot also be the repository worker"
       end
-      unless value["prompt_delivery_method"] == "codex-thread-message"
-        raise ValidationError, "DispatchReceipt must use project-preserving Codex task messaging"
-      end
-      unless value["project_association_verification_source"] == "live-project-and-task-list"
-        raise ValidationError, "DispatchReceipt project association must come from the live project and task lists"
+      case value["prompt_delivery_method"]
+      when "codex-thread-message"
+        unless value["post_delivery_project_verification_schema_version"] == "kepler.worker-task-verification/v1" &&
+               value["project_association_verification_source"] == "live-project-and-task-list"
+          raise ValidationError, "DispatchReceipt Codex messaging requires live project and task verification"
+        end
+      when "herdr-agent-prompt"
+        unless value["post_delivery_project_verification_schema_version"] == "kepler.herdr-prompt-delivery/v1" &&
+               value["project_association_verification_source"] == "cli-app-server-and-herdr-terminal"
+          raise ValidationError, "DispatchReceipt Herdr delivery requires CLI task and terminal verification"
+        end
+        prompt_bytes = begin
+          Integer(value["prompt_bytes"])
+        rescue ArgumentError, TypeError
+          nil
+        end
+        unless value["prompt_delivery_schema_version"] == "kepler.herdr-prompt-delivery/v1" &&
+               Support.present?(value["prompt_delivery_id"]) &&
+               value["prompt_sha256"].to_s.match?(/\A[0-9a-f]{64}\z/) &&
+               prompt_bytes&.positive? && value.key?("herdr_attachment")
+          raise ValidationError, "DispatchReceipt Herdr prompt evidence is incomplete"
+        end
+        attachment = value["herdr_attachment"]
+        unless attachment.is_a?(Hash) &&
+               attachment["attachment_mode"] == "shared-control-workspace" &&
+               attachment["workspace_owned"] == false &&
+               Support.present?(attachment["control_tab_id"]) &&
+               Support.present?(attachment["control_pane_id"]) &&
+               Support.present?(attachment["terminal_id"]) &&
+               attachment["resume_argv_sha256"].to_s.match?(/\A[0-9a-f]{64}\z/)
+          raise ValidationError, "DispatchReceipt Herdr launch identity evidence is incomplete"
+        end
+      else
+        raise ValidationError, "DispatchReceipt prompt delivery method is unsupported"
       end
       before = mapping!(value["project_association_before"], "DispatchReceipt project association before prompt")
       after = mapping!(value["project_association_after"], "DispatchReceipt project association after prompt")
@@ -230,16 +259,17 @@ module Kepler
 
     def cleanup_receipt!(value)
       document!(value, "CleanupReceipt")
-      required = %w[api_version kind schema_version plan_id plan_revision unit_id task_id runtime_project_id project_path worker_cwd mode herdr_attachment herdr_workspace_closed task_archived remove_worktree_requested worktree_removed branch_preserved]
-      unknown = value.keys - required
+      required = %w[api_version kind schema_version plan_id plan_revision unit_id task_id runtime_project_id project_path worker_cwd mode herdr_attachment task_archived remove_worktree_requested worktree_removed branch_preserved]
+      lifecycle_fields = %w[herdr_workspace_closed herdr_workspace_preserved herdr_worker_tab_closed]
+      unknown = value.keys - required - lifecycle_fields
       raise ValidationError, "CleanupReceipt has unsupported fields: #{unknown.join(', ')}" unless unknown.empty?
       %w[schema_version plan_id plan_revision unit_id task_id runtime_project_id project_path worker_cwd mode herdr_attachment].each do |key|
         raise ValidationError, "CleanupReceipt is missing #{key}" unless Support.present?(value[key])
       end
-      %w[herdr_workspace_closed task_archived remove_worktree_requested worktree_removed branch_preserved].each do |key|
+      %w[task_archived remove_worktree_requested worktree_removed branch_preserved].each do |key|
         raise ValidationError, "CleanupReceipt is missing #{key}" unless value.key?(key)
       end
-      unless value["schema_version"] == "kepler.worker-cleanup/v1"
+      unless %w[kepler.worker-cleanup/v1 kepler.worker-cleanup/v2].include?(value["schema_version"])
         raise ValidationError, "CleanupReceipt schema version is unsupported"
       end
       begin
@@ -249,8 +279,18 @@ module Kepler
       end
       raise ValidationError, "CleanupReceipt plan revision must be positive" unless revision.positive?
       herdr_attachment!(value["herdr_attachment"], task_id: value["task_id"], worker_cwd: value["worker_cwd"])
-      unless value["herdr_workspace_closed"] == true && value["task_archived"] == true && value["branch_preserved"] == true
-        raise ValidationError, "CleanupReceipt must close the owned Herdr workspace, archive the task, and preserve the branch"
+      case value["schema_version"]
+      when "kepler.worker-cleanup/v1"
+        unless value["herdr_workspace_closed"] == true
+          raise ValidationError, "CleanupReceipt must close the legacy owned Herdr workspace"
+        end
+      when "kepler.worker-cleanup/v2"
+        unless value["herdr_workspace_preserved"] == true && value["herdr_worker_tab_closed"] == true
+          raise ValidationError, "CleanupReceipt must preserve the control workspace and close the worker tab"
+        end
+      end
+      unless value["task_archived"] == true && value["branch_preserved"] == true
+        raise ValidationError, "CleanupReceipt must archive the task and preserve the branch"
       end
       unless [true, false].include?(value["remove_worktree_requested"]) && [true, false].include?(value["worktree_removed"])
         raise ValidationError, "CleanupReceipt worktree outcomes must be boolean"
@@ -296,7 +336,10 @@ module Kepler
     def herdr_attachment!(value, task_id:, worker_cwd:)
       attachment = mapping!(value, "Herdr attachment")
       required = %w[schema_version herdr_version protocol workspace_id tab_id pane_id agent_name agent_kind resumed_task_id worker_cwd workspace_owned tab_owned pane_owned agent_owned]
-      unknown = attachment.keys - required
+      runtime_fields = %w[model thinking configuration_mode permission_profile sandbox_mode approval_policy]
+      launch_fields = %w[terminal_id resume_argv_sha256]
+      shared_fields = %w[attachment_mode control_tab_id control_pane_id]
+      unknown = attachment.keys - required - runtime_fields - launch_fields - shared_fields
       raise ValidationError, "Herdr attachment has unsupported fields: #{unknown.join(', ')}" unless unknown.empty?
       %w[schema_version herdr_version protocol workspace_id tab_id pane_id agent_name agent_kind resumed_task_id worker_cwd].each do |key|
         raise ValidationError, "Herdr attachment is missing #{key}" unless Support.present?(attachment[key])
@@ -319,8 +362,40 @@ module Kepler
       unless attachment["worker_cwd"] == worker_cwd
         raise ValidationError, "Herdr attachment worker path does not match the worker task"
       end
-      unless attachment["workspace_owned"] == true && attachment["tab_owned"] == true && attachment["pane_owned"] == true && attachment["agent_owned"] == true
-        raise ValidationError, "Herdr attachment must own its workspace, tab, pane, and agent"
+      unless attachment["tab_owned"] == true && attachment["pane_owned"] == true && attachment["agent_owned"] == true
+        raise ValidationError, "Herdr attachment must own its tab, pane, and agent"
+      end
+      case attachment["attachment_mode"]
+      when "shared-control-workspace"
+        unless attachment["workspace_owned"] == false && Support.present?(attachment["control_tab_id"]) && Support.present?(attachment["control_pane_id"])
+          raise ValidationError, "shared Herdr attachment must preserve and identify the control workspace"
+        end
+        if attachment["tab_id"] == attachment["control_tab_id"] || attachment["pane_id"] == attachment["control_pane_id"]
+          raise ValidationError, "Herdr worker attachment cannot reuse the control tab or pane"
+        end
+      when nil
+        unless attachment["workspace_owned"] == true
+          raise ValidationError, "legacy Herdr attachment must own its worker workspace"
+        end
+      else
+        raise ValidationError, "Herdr attachment mode is unsupported"
+      end
+      if (attachment.keys & launch_fields).any?
+        missing = launch_fields - attachment.keys
+        raise ValidationError, "Herdr attachment launch evidence is incomplete: #{missing.join(', ')}" unless missing.empty?
+        raise ValidationError, "Herdr attachment terminal is missing" unless Support.present?(attachment["terminal_id"])
+        unless attachment["resume_argv_sha256"].to_s.match?(/\A[0-9a-f]{64}\z/)
+          raise ValidationError, "Herdr attachment resume argv digest is invalid"
+        end
+      end
+      if (attachment.keys & runtime_fields).any?
+        missing = runtime_fields - attachment.keys
+        raise ValidationError, "Herdr attachment runtime evidence is incomplete: #{missing.join(', ')}" unless missing.empty?
+        raise ValidationError, "Herdr attachment model is missing" unless Support.present?(attachment["model"])
+        raise ValidationError, "Herdr attachment thinking is missing" unless Support.present?(attachment["thinking"])
+        unless %w[global-config permission-profile].include?(attachment["configuration_mode"])
+          raise ValidationError, "Herdr attachment configuration mode is unsupported"
+        end
       end
       attachment
     end

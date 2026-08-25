@@ -26,6 +26,26 @@ import json
 import os
 import sys
 
+created_project = None
+
+def thread_turns():
+    marker = os.environ.get("FAKE_PROMPT_MARKER")
+    prompt = None
+    if marker and os.path.exists(marker):
+        with open(marker, encoding="utf-8") as handle:
+            prompt = handle.read()
+    if prompt is None and os.environ.get("FAKE_THREAD_PROMPT"):
+        prompt = os.environ["FAKE_THREAD_PROMPT"]
+    if prompt is None and os.environ.get("FAKE_RESUME_NONEMPTY"):
+        prompt = "existing prompt"
+    if prompt is None:
+        return []
+    items = [{"id": "user-1", "type": "userMessage", "clientId": None, "content": [{"type": "text", "text": prompt}]}]
+    result = os.environ.get("FAKE_RESULT_TEXT")
+    if result is not None:
+        items.append({"id": "agent-1", "type": "agentMessage", "phase": os.environ.get("FAKE_RESULT_PHASE", "final_answer"), "text": result})
+    return [{"id": "turn-1", "status": os.environ.get("FAKE_TURN_STATUS", "inProgress"), "items": items}]
+
 for line in sys.stdin:
     message = json.loads(line)
     request_id = message.get("id")
@@ -44,6 +64,29 @@ for line in sys.stdin:
             {"id": ":workspace", "allowed": True},
             {"id": "named-profile", "allowed": True},
         ], "nextCursor": None}
+    elif method == "project/list":
+        projects = json.loads(os.environ.get("FAKE_PROJECTS", "[]"))
+        if created_project is not None and not projects:
+            projects = [created_project]
+        result = {"data": projects, "nextCursor": None}
+    elif method == "project/create":
+        params = message["params"]
+        created_project = {
+            "id": "cli-project-test",
+            "name": params["name"],
+            "roots": params["roots"],
+            "metadata": params.get("metadata", {}),
+            "createdAt": 1,
+            "updatedAt": 1,
+            "position": 0,
+        }
+        result = {"project": created_project}
+    elif method == "project/read":
+        projects = json.loads(os.environ.get("FAKE_PROJECTS", "[]"))
+        project = created_project
+        if project is None:
+            project = next((entry for entry in projects if entry["id"] == message["params"]["projectId"]), None)
+        result = {"project": project}
     elif method == "thread/start":
         params = message["params"]
         result = {
@@ -90,6 +133,14 @@ for line in sys.stdin:
                 )
             },
         }
+    elif method == "thread/read":
+        result = {"thread": {
+            "id": message["params"]["threadId"],
+            "projectId": os.environ.get("FAKE_RESUME_PROJECT_ID", "project-a"),
+            "cwd": os.environ["FAKE_PROJECT_CWD"],
+            "turns": thread_turns() if message["params"].get("includeTurns") else [],
+            "status": {"type": "active" if os.environ.get("FAKE_RESUME_ACTIVE") else "idle"},
+        }}
     elif method == "thread/name/set":
         result = {}
     elif method == "thread/archive":
@@ -128,17 +179,28 @@ elif args == ["api", "schema", "--json"]:
     print(json.dumps({"protocol": int(os.environ.get("FAKE_HERDR_PROTOCOL", "19")), "schemas": {"success_response": {}}}))
 elif args == ["status", "server", "--json"]:
     print(json.dumps({"version": "0.8.0", "protocol": int(os.environ.get("FAKE_HERDR_PROTOCOL", "19"))}))
-elif args[:2] == ["workspace", "create"]:
+elif args[:3] == ["pane", "current", "--current"]:
+    emit({"type": "pane_current", "pane": {"workspace_id": "w0", "tab_id": "w0:t0", "pane_id": "w0:p0", "agent": "codex"}})
+elif args[:2] == ["tab", "create"]:
     if os.environ.get("FAKE_HERDR_CREATE_FAIL"):
         sys.exit(1)
-    emit({"type": "workspace_created", "workspace": {"workspace_id": "w1"}, "tab": {"workspace_id": "w1", "tab_id": "w1:t1"}, "root_pane": {"workspace_id": "w1", "tab_id": "w1:t1", "pane_id": "w1:p1", "cwd": os.environ.get("FAKE_HERDR_CWD", cwd)}})
+    emit({"type": "tab_created", "tab": {"workspace_id": "w0", "tab_id": "w0:t1"}, "root_pane": {"workspace_id": "w0", "tab_id": "w0:t1", "pane_id": "w0:p1", "cwd": os.environ.get("FAKE_HERDR_CWD", cwd)}})
 elif args[:2] == ["agent", "start"]:
     if os.environ.get("FAKE_HERDR_START_FAIL"):
         sys.exit(1)
-    emit({"type": "agent_started", "agent": {"terminal_id": "term1"}})
+    separator = args.index("--")
+    emit({"type": "agent_started", "agent": {"terminal_id": "term1"}, "argv": ["codex", *args[separator + 1:]]})
 elif args[:2] == ["agent", "get"]:
-    emit({"type": "agent_info", "agent": {"workspace_id": "w1", "tab_id": "w1:t1", "pane_id": "w1:p1", "name": name, "agent": os.environ.get("FAKE_HERDR_KIND", "codex"), "cwd": os.environ.get("FAKE_HERDR_CWD", cwd), "agent_session": {"value": session}, "agent_status": os.environ.get("FAKE_HERDR_STATUS", "idle")}})
+    emit({"type": "agent_info", "agent": {"workspace_id": "w0", "tab_id": "w0:t1", "pane_id": "w0:p1", "terminal_id": "term1", "name": name, "agent": os.environ.get("FAKE_HERDR_KIND", "codex"), "cwd": os.environ.get("FAKE_HERDR_CWD", cwd), "agent_session": {"value": session}, "agent_status": os.environ.get("FAKE_HERDR_STATUS", "idle")}})
+elif args[:2] == ["agent", "prompt"]:
+    marker = os.environ.get("FAKE_PROMPT_MARKER")
+    if marker:
+        with open(marker, "w", encoding="utf-8") as handle:
+            handle.write(args[3])
+    emit({"type": "agent_prompted", "agent": {"name": name}})
 elif args[:2] == ["workspace", "close"]:
+    emit({"type": "ok"})
+elif args[:2] == ["tab", "close"]:
     emit({"type": "ok"})
 else:
     sys.exit(2)
@@ -316,10 +378,13 @@ class KeplerDispatchMcpTest(unittest.TestCase):
         self.assertTrue(result["created"])
         self.assertEqual("thread-test", result["threadId"])
 
-    def test_tool_schema_cannot_send_prompt_or_select_environment(self) -> None:
+    def test_only_delivery_tool_can_accept_a_prompt(self) -> None:
         for tool in MODULE.TOOLS:
             properties = tool["inputSchema"]["properties"]
-            self.assertNotIn("prompt", properties)
+            if tool["name"] == "deliver_herdr_worker_prompt":
+                self.assertIn("prompt", properties)
+            else:
+                self.assertNotIn("prompt", properties)
             self.assertNotIn("environment", properties)
             self.assertFalse(tool["inputSchema"]["additionalProperties"])
         planner = MODULE.PLANNER_TOOL["inputSchema"]["properties"]
@@ -342,6 +407,61 @@ class KeplerDispatchMcpTest(unittest.TestCase):
             "expected_runtime_project_id",
             MODULE.WORKER_TOOL["inputSchema"]["required"],
         )
+
+    def test_cli_project_catalog_and_registration_are_exact_and_idempotent(self) -> None:
+        project = {
+            "id": "cli-project-existing",
+            "name": "Existing",
+            "roots": [{"path": str(self.project)}],
+            "metadata": {},
+            "createdAt": 1,
+            "updatedAt": 1,
+            "position": 0,
+        }
+        with mock.patch.dict(
+            os.environ,
+            {
+                "HERDR_ENV": "1",
+                "FAKE_PROJECTS": json.dumps([project]),
+            },
+            clear=False,
+        ):
+            catalog = MODULE.list_cli_projects(codex_executable=str(self.fake_codex))
+            registered = MODULE.register_cli_project(
+                cwd=str(self.project),
+                name="Renamed",
+                confirmed=True,
+                codex_executable=str(self.fake_codex),
+            )
+        self.assertEqual(2, catalog["schemaVersion"])
+        self.assertEqual("kepler.cli-project-catalog/v1", catalog["catalogSchema"])
+        self.assertEqual("cli-project-existing", catalog["projects"][0]["projectId"])
+        self.assertFalse(registered["created"])
+        self.assertEqual("cli-project-existing", registered["project"]["id"])
+
+        with mock.patch.dict(
+            os.environ,
+            {"HERDR_ENV": "1", "FAKE_PROJECTS": "[]"},
+            clear=False,
+        ):
+            created = MODULE.register_cli_project(
+                cwd=str(self.project),
+                name="CLI project",
+                confirmed=True,
+                codex_executable=str(self.fake_codex),
+            )
+        self.assertTrue(created["created"])
+        self.assertEqual("cli-project-test", created["project"]["id"])
+
+    def test_cli_project_registration_requires_explicit_confirmation(self) -> None:
+        with mock.patch.dict(os.environ, {"HERDR_ENV": "1"}, clear=False):
+            with self.assertRaisesRegex(MODULE.DispatchError, "confirmed must be true"):
+                MODULE.register_cli_project(
+                    cwd=str(self.project),
+                    name="CLI project",
+                    confirmed=False,
+                    codex_executable=str(self.fake_codex),
+                )
 
     def test_stdio_planner_call_reuses_current_sol_high_task(self) -> None:
         response = MODULE._handle_request(
@@ -556,8 +676,29 @@ class KeplerDispatchMcpTest(unittest.TestCase):
         self.assertEqual("thread-test", result["resumed_task_id"])
         self.assertEqual(str(self.project.resolve()), result["worker_cwd"])
         self.assertEqual(19, result["protocol"])
-        self.assertTrue(result["workspace_owned"])
+        self.assertEqual("term1", result["terminal_id"])
+        self.assertRegex(result["resume_argv_sha256"], r"^[0-9a-f]{64}$")
+        self.assertFalse(result["workspace_owned"])
+        self.assertEqual("shared-control-workspace", result["attachment_mode"])
+        self.assertEqual("w0:t0", result["control_tab_id"])
+        self.assertEqual("w0:p0", result["control_pane_id"])
         commands = [json.loads(line) for line in log.read_text(encoding="utf-8").splitlines()]
+        self.assertIn(["pane", "current", "--current"], commands)
+        self.assertIn(
+            [
+                "tab",
+                "create",
+                "--workspace",
+                "w0",
+                "--cwd",
+                str(self.project.resolve()),
+                "--label",
+                "CDM worker",
+                "--no-focus",
+            ],
+            commands,
+        )
+        self.assertFalse(any(command[:2] == ["workspace", "create"] for command in commands))
         self.assertIn(
             [
                 "agent",
@@ -566,15 +707,27 @@ class KeplerDispatchMcpTest(unittest.TestCase):
                 "--kind",
                 "codex",
                 "--pane",
-                "w1:p1",
+                "w0:p1",
                 "--",
                 "--no-alt-screen",
+                "-c",
+                "check_for_update_on_startup=false",
+                "-m",
+                "gpt-5.6-terra",
+                "-c",
+                'model_reasoning_effort="high"',
+                "-s",
+                "danger-full-access",
+                "-a",
+                "on-request",
                 "resume",
                 "thread-test",
             ],
             commands,
         )
         self.assertFalse(any(command[:2] == ["agent", "prompt"] for command in commands))
+        self.assertEqual("gpt-5.6-terra", result["model"])
+        self.assertEqual("high", result["thinking"])
 
     def test_attach_herdr_worker_refuses_nonempty_or_wrong_session_and_rolls_back(self) -> None:
         log = self.root / "herdr.log"
@@ -604,7 +757,7 @@ class KeplerDispatchMcpTest(unittest.TestCase):
             with self.assertRaisesRegex(MODULE.DispatchError, "session does not match"):
                 self._attach_worker()
         commands = [json.loads(line) for line in log.read_text(encoding="utf-8").splitlines()]
-        self.assertEqual(["workspace", "close", "w1"], commands[-1])
+        self.assertEqual(["tab", "close", "w0:t1"], commands[-1])
 
     def test_attach_herdr_worker_refuses_wrong_workspace_cwd(self) -> None:
         wrong_cwd = self.root / "wrong"
@@ -620,10 +773,10 @@ class KeplerDispatchMcpTest(unittest.TestCase):
             },
             clear=False,
         ):
-            with self.assertRaisesRegex(MODULE.DispatchError, "workspace/create cwd"):
+            with self.assertRaisesRegex(MODULE.DispatchError, "tab/create cwd"):
                 self._attach_worker()
         commands = [json.loads(line) for line in log.read_text(encoding="utf-8").splitlines()]
-        self.assertEqual(["workspace", "close", "w1"], commands[-1])
+        self.assertEqual(["tab", "close", "w0:t1"], commands[-1])
 
     def test_attach_herdr_worker_requires_protocol_nineteen(self) -> None:
         log = self.root / "herdr.log"
@@ -642,6 +795,156 @@ class KeplerDispatchMcpTest(unittest.TestCase):
         commands = [json.loads(line) for line in log.read_text(encoding="utf-8").splitlines()]
         self.assertEqual([["api", "schema", "--json"]], commands)
 
+    def test_deliver_herdr_prompt_records_exact_task_without_monitoring(self) -> None:
+        marker = self.root / "prompt.txt"
+        log = self.root / "delivery.log"
+        prompt = "ContextPack: synthetic-unit\nReturn only the WorkerResult."
+        with mock.patch.dict(
+            os.environ,
+            {
+                "HERDR_ENV": "1",
+                "FAKE_PROJECT_CWD": str(self.project),
+                "FAKE_PROMPT_MARKER": str(marker),
+                "FAKE_HERDR_LOG": str(log),
+            },
+            clear=False,
+        ):
+            attachment = self._attach_worker()
+            result = MODULE.deliver_herdr_worker_prompt(
+                thread_id="thread-test",
+                expected_runtime_project_id=PROJECT_ID,
+                cwd=str(self.project),
+                delivery_id="synthetic-unit-r1",
+                prompt=prompt,
+                herdr_attachment=attachment,
+                codex_executable=str(self.fake_codex),
+                herdr_executable=str(self.fake_herdr),
+            )
+            duplicate = MODULE.deliver_herdr_worker_prompt(
+                thread_id="thread-test",
+                expected_runtime_project_id=PROJECT_ID,
+                cwd=str(self.project),
+                delivery_id="synthetic-unit-r1",
+                prompt=prompt,
+                herdr_attachment=attachment,
+                codex_executable=str(self.fake_codex),
+                herdr_executable=str(self.fake_herdr),
+            )
+        self.assertTrue(result["delivered"])
+        self.assertFalse(result["deduplicated"])
+        self.assertEqual(PROJECT_ID, result["actualRuntimeProjectId"])
+        self.assertEqual(0, result["turnCountBefore"])
+        self.assertEqual(1, result["turnCountAfter"])
+        self.assertNotIn(prompt, json.dumps(result))
+        self.assertTrue(duplicate["deduplicated"])
+        commands = [json.loads(line) for line in log.read_text(encoding="utf-8").splitlines()]
+        prompts = [command for command in commands if command[:2] == ["agent", "prompt"]]
+        self.assertEqual([["agent", "prompt", "worker-agent", prompt]], prompts)
+
+    def test_deliver_herdr_prompt_fails_closed_on_project_drift(self) -> None:
+        marker = self.root / "prompt.txt"
+        with mock.patch.dict(
+            os.environ,
+            {
+                "HERDR_ENV": "1",
+                "FAKE_PROJECT_CWD": str(self.project),
+                "FAKE_PROMPT_MARKER": str(marker),
+            },
+            clear=False,
+        ):
+            attachment = self._attach_worker()
+        with mock.patch.dict(
+            os.environ,
+            {
+                "HERDR_ENV": "1",
+                "FAKE_PROJECT_CWD": str(self.project),
+                "FAKE_PROMPT_MARKER": str(marker),
+                "FAKE_RESUME_PROJECT_ID": "wrong-project",
+            },
+            clear=False,
+        ):
+            with self.assertRaisesRegex(MODULE.DispatchError, "thread/read projectId"):
+                MODULE.deliver_herdr_worker_prompt(
+                    thread_id="thread-test",
+                    expected_runtime_project_id=PROJECT_ID,
+                    cwd=str(self.project),
+                    delivery_id="synthetic-unit-r1",
+                    prompt="ContextPack",
+                    herdr_attachment=attachment,
+                    codex_executable=str(self.fake_codex),
+                    herdr_executable=str(self.fake_herdr),
+                )
+        self.assertFalse(marker.exists())
+
+    def test_collect_herdr_worker_result_returns_only_final_response(self) -> None:
+        marker = self.root / "prompt.txt"
+        worker_result = "apiVersion: kepler.dev/v1\nkind: WorkerResult\nstatus: completed"
+        with mock.patch.dict(
+            os.environ,
+            {
+                "HERDR_ENV": "1",
+                "FAKE_PROJECT_CWD": str(self.project),
+            },
+            clear=False,
+        ):
+            attachment = self._attach_worker()
+        marker.write_text("ContextPack", encoding="utf-8")
+        with mock.patch.dict(
+            os.environ,
+            {
+                "HERDR_ENV": "1",
+                "FAKE_PROJECT_CWD": str(self.project),
+                "FAKE_PROMPT_MARKER": str(marker),
+                "FAKE_RESULT_TEXT": worker_result,
+                "FAKE_TURN_STATUS": "completed",
+                "FAKE_HERDR_STATUS": "done",
+            },
+            clear=False,
+        ):
+            collected = MODULE.collect_herdr_worker_result(
+                thread_id="thread-test",
+                expected_runtime_project_id=PROJECT_ID,
+                cwd=str(self.project),
+                herdr_attachment=attachment,
+                codex_executable=str(self.fake_codex),
+                herdr_executable=str(self.fake_herdr),
+            )
+        self.assertEqual(worker_result, collected["finalResponse"])
+        self.assertEqual("completed", collected["turnStatus"])
+        self.assertNotIn("ContextPack", json.dumps(collected))
+
+    def test_collect_herdr_worker_result_refuses_active_turn(self) -> None:
+        marker = self.root / "prompt.txt"
+        with mock.patch.dict(
+            os.environ,
+            {
+                "HERDR_ENV": "1",
+                "FAKE_PROJECT_CWD": str(self.project),
+            },
+            clear=False,
+        ):
+            attachment = self._attach_worker()
+        marker.write_text("ContextPack", encoding="utf-8")
+        with mock.patch.dict(
+            os.environ,
+            {
+                "HERDR_ENV": "1",
+                "FAKE_PROJECT_CWD": str(self.project),
+                "FAKE_PROMPT_MARKER": str(marker),
+                "FAKE_HERDR_STATUS": "idle",
+            },
+            clear=False,
+        ):
+            with self.assertRaisesRegex(MODULE.DispatchError, "not completed"):
+                MODULE.collect_herdr_worker_result(
+                    thread_id="thread-test",
+                    expected_runtime_project_id=PROJECT_ID,
+                    cwd=str(self.project),
+                    herdr_attachment=attachment,
+                    codex_executable=str(self.fake_codex),
+                    herdr_executable=str(self.fake_herdr),
+                )
+
     def test_cleanup_refuses_active_worker_or_wrong_attachment_task(self) -> None:
         attachment = self._attach_worker()
         with mock.patch.dict(
@@ -649,6 +952,19 @@ class KeplerDispatchMcpTest(unittest.TestCase):
             {"HERDR_ENV": "1", "FAKE_PROJECT_CWD": str(self.project)},
             clear=False,
         ):
+            with self.assertRaisesRegex(MODULE.DispatchError, "explicit Kepler cleanup authorization"):
+                MODULE.cleanup_herdr_worker(
+                    thread_id="thread-test",
+                    expected_runtime_project_id=PROJECT_ID,
+                    project_path=str(self.project),
+                    worker_cwd=str(self.project),
+                    mode="local",
+                    herdr_attachment=attachment,
+                    remove_worktree=False,
+                    authorized=False,
+                    codex_executable=str(self.fake_codex),
+                    herdr_executable=str(self.fake_herdr),
+                )
             with self.assertRaisesRegex(MODULE.DispatchError, "Local mode"):
                 MODULE.cleanup_herdr_worker(
                     thread_id="thread-test",
@@ -658,6 +974,7 @@ class KeplerDispatchMcpTest(unittest.TestCase):
                     mode="local",
                     herdr_attachment=attachment,
                     remove_worktree=True,
+                    authorized=True,
                     codex_executable=str(self.fake_codex),
                     herdr_executable=str(self.fake_herdr),
                 )
@@ -681,11 +998,13 @@ class KeplerDispatchMcpTest(unittest.TestCase):
                     mode="local",
                     herdr_attachment=attachment,
                     remove_worktree=False,
+                    authorized=True,
                     codex_executable=str(self.fake_codex),
                     herdr_executable=str(self.fake_herdr),
                 )
         commands = [json.loads(line) for line in log.read_text(encoding="utf-8").splitlines()]
         self.assertFalse(any(command[:2] == ["workspace", "close"] for command in commands))
+        self.assertFalse(any(command[:2] == ["tab", "close"] for command in commands))
         wrong = dict(attachment)
         wrong["resumed_task_id"] = "other-task"
         with mock.patch.dict(
@@ -702,6 +1021,7 @@ class KeplerDispatchMcpTest(unittest.TestCase):
                     mode="local",
                     herdr_attachment=wrong,
                     remove_worktree=False,
+                    authorized=True,
                     codex_executable=str(self.fake_codex),
                     herdr_executable=str(self.fake_herdr),
                 )
@@ -741,11 +1061,13 @@ class KeplerDispatchMcpTest(unittest.TestCase):
                     mode="worktree",
                     herdr_attachment=attachment,
                     remove_worktree=True,
+                    authorized=True,
                     codex_executable=str(self.fake_codex),
                     herdr_executable=str(self.fake_herdr),
                 )
         commands = [json.loads(line) for line in log.read_text(encoding="utf-8").splitlines()]
         self.assertFalse(any(command[:2] == ["workspace", "close"] for command in commands))
+        self.assertFalse(any(command[:2] == ["tab", "close"] for command in commands))
         (worktree / "dirty.txt").unlink()
         (worktree / "unmerged.txt").write_text("unmerged\n", encoding="utf-8")
         subprocess.run(["git", "add", "unmerged.txt"], cwd=worktree, check=True)
@@ -769,11 +1091,13 @@ class KeplerDispatchMcpTest(unittest.TestCase):
                     mode="worktree",
                     herdr_attachment=attachment,
                     remove_worktree=True,
+                    authorized=True,
                     codex_executable=str(self.fake_codex),
                     herdr_executable=str(self.fake_herdr),
                 )
         commands = [json.loads(line) for line in unmerged_log.read_text(encoding="utf-8").splitlines()]
         self.assertFalse(any(command[:2] == ["workspace", "close"] for command in commands))
+        self.assertFalse(any(command[:2] == ["tab", "close"] for command in commands))
 
     def test_cleanup_closes_archives_and_removes_only_merged_worktree(self) -> None:
         subprocess.run(["git", "init", "-q"], cwd=self.project, check=True)
@@ -819,11 +1143,13 @@ class KeplerDispatchMcpTest(unittest.TestCase):
                 mode="worktree",
                 herdr_attachment=attachment,
                 remove_worktree=True,
+                authorized=True,
                 codex_executable=str(self.fake_codex),
                 herdr_executable=str(self.fake_herdr),
             )
 
-        self.assertTrue(result["herdrWorkspaceClosed"])
+        self.assertTrue(result["herdrWorkspacePreserved"])
+        self.assertTrue(result["herdrWorkerTabClosed"])
         self.assertTrue(result["taskArchived"])
         self.assertTrue(result["worktreeRemoved"])
         self.assertTrue(result["branchPreserved"])
@@ -839,7 +1165,8 @@ class KeplerDispatchMcpTest(unittest.TestCase):
         ).stdout
         self.assertIn("worker", branches)
         commands = [json.loads(line) for line in herdr_log.read_text(encoding="utf-8").splitlines()]
-        self.assertIn(["workspace", "close", "w1"], commands)
+        self.assertIn(["tab", "close", "w0:t1"], commands)
+        self.assertNotIn(["workspace", "close", "w0"], commands)
         self.assertEqual("archive thread-test\n", codex_log.read_text(encoding="utf-8"))
 
 

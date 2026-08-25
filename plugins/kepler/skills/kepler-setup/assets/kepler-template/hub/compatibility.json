@@ -2,7 +2,7 @@
   "schema_version": "kepler.hub-compatibility/v1",
   "schema": "hub/schemas/hub-compatibility.schema.json",
   "product": "kepler",
-  "template_version": "1.1.1",
+  "template_version": "1.1.2",
   "capabilities": {
     "kepler.command.doctor.v1": {
       "kind": "command",
@@ -70,6 +70,27 @@
       "fallback": {
         "mode": "bundled_reference",
         "reference": "skills/kepler/references/dispatch.md"
+      }
+    },
+    "kepler.command.cli-herdr-dispatch.v1": {
+      "kind": "command",
+      "description": "Desktop-independent Herdr dispatch through the persistent CLI project registry, worker tabs inside the current control workspace, exact prompt delivery, final-response-only result collection, and preview-authorized cleanup.",
+      "probe": {
+        "help_contains": "bin/kepler route plan "
+      },
+      "managed_paths": [
+        "AGENTS.md",
+        "hub/schemas/cleanup-receipt.schema.json",
+        "hub/schemas/dispatch-receipt.schema.json",
+        "lib/kepler/contracts.rb",
+        "lib/kepler/plan_store.rb",
+        "lib/kepler/setup_store.rb",
+        "docs/codex-ui-workflow.md",
+        "docs/workflows/thread-routing.md",
+        "docs/workflow.md"
+      ],
+      "fallback": {
+        "mode": "stop_and_plan_migration"
       }
     },
     "kepler.command.route-plan.v1": {

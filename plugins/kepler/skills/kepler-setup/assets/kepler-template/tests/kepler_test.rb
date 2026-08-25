@@ -130,9 +130,14 @@ class KeplerTest < Minitest::Test
       "pane_id" => "pane-alpha-change",
       "agent_name" => "alpha-change",
       "agent_kind" => "codex",
+      "attachment_mode" => "shared-control-workspace",
+      "control_tab_id" => "tab-control",
+      "control_pane_id" => "pane-control",
+      "terminal_id" => "terminal-alpha-change",
+      "resume_argv_sha256" => "b" * 64,
       "resumed_task_id" => task_id,
       "worker_cwd" => worker_cwd,
-      "workspace_owned" => true,
+      "workspace_owned" => false,
       "tab_owned" => true,
       "pane_owned" => true,
       "agent_owned" => true
@@ -228,6 +233,21 @@ class KeplerTest < Minitest::Test
       assert_equal File.realpath(beta), projects.dig("beta", "path")
       assert_equal [], Dir.children(alpha)
       assert_equal [], Dir.children(beta)
+    end
+  end
+
+  def test_setup_accepts_cli_project_catalog_without_desktop_dependency
+    with_control do |_root, config, directory|
+      catalog, = create_catalog(directory)
+      value = JSON.parse(File.read(catalog))
+      value["selectionSource"] = "kepler_dispatch.list_cli_projects"
+      File.write(catalog, JSON.pretty_generate(value))
+      result = Kepler::SetupStore.new(config).plan(
+        project_catalog: catalog,
+        project_ids: ["runtime-alpha-001"]
+      )
+      assert_equal "kepler_dispatch.list_cli_projects", result["selection_source"]
+      assert_equal 1, result.dig("summary", "selected")
     end
   end
 
@@ -590,8 +610,14 @@ class KeplerTest < Minitest::Test
       assert_equal "unchanged", repeated["result_ingestion"]
 
       cleanup_envelope = store.prepare_cleanup(id: "synthetic-plan", revision: 1)
+      assert_equal true, cleanup_envelope["preview_only"]
+      assert_equal false, cleanup_envelope["mutations_performed"]
+      assert_equal "$kepler cleanup authorize", cleanup_envelope["authorization_command"]
       cleanup_unit = cleanup_envelope.fetch("units").first
       assert_equal true, cleanup_unit.dig("requested_action", "remove_worktree")
+      assert_equal true, cleanup_unit.dig("requested_action", "close_herdr_worker_tab")
+      assert_equal true, cleanup_unit.dig("requested_action", "preserve_control_workspace")
+      assert_equal false, cleanup_unit.dig("requested_action", "close_herdr_workspace")
       assert_equal "task-alpha-001", cleanup_unit["task_id"]
       assert_equal "alpha-change", cleanup_unit.dig("herdr_attachment", "agent_name")
       preserve_envelope = store.prepare_cleanup(id: "synthetic-plan", revision: 1, preserve_worktrees: true)
@@ -611,14 +637,15 @@ class KeplerTest < Minitest::Test
         cleanup_result,
         JSON.pretty_generate(
           {
-            "schemaVersion" => "kepler.worker-cleanup/v1",
+            "schemaVersion" => "kepler.worker-cleanup/v2",
             "taskId" => "task-alpha-001",
             "runtimeProjectId" => "runtime-alpha-001",
             "projectPath" => alpha,
             "workerCwd" => worker_cwd,
             "mode" => "worktree",
             "herdrAttachment" => herdr_attachment(task_id: "task-alpha-001", worker_cwd: worker_cwd),
-            "herdrWorkspaceClosed" => true,
+            "herdrWorkspacePreserved" => true,
+            "herdrWorkerTabClosed" => true,
             "taskArchived" => true,
             "removeWorktreeRequested" => true,
             "worktreeRemoved" => true,
@@ -834,6 +861,74 @@ class KeplerTest < Minitest::Test
       )
     end
     assert_includes task_error.message, "does not match the worker task"
+  end
+
+  def test_dispatch_receipt_accepts_cli_native_herdr_prompt_evidence
+    worker_cwd = "/synthetic/alpha"
+    receipt = {
+      "api_version" => "kepler.dev/v1",
+      "kind" => "DispatchReceipt",
+      "task_id" => "task-alpha-001",
+      "runtime_project_id" => "runtime-alpha-001",
+      "project_path" => worker_cwd,
+      "mode" => "local",
+      "requested_model" => "gpt-5.6-terra",
+      "effective_model" => "gpt-5.6-terra",
+      "requested_thinking" => "high",
+      "effective_thinking" => "high",
+      "authorization_boundary" => "No remote writes.",
+      "creation_method" => "kepler-bootstrap-worker-task",
+      "bootstrap_schema_version" => "kepler.worker-task-bootstrap/v1",
+      "bootstrap_task_id" => "task-alpha-001",
+      "bootstrap_expected_runtime_project_id" => "runtime-alpha-001",
+      "bootstrap_actual_runtime_project_id" => "runtime-alpha-001",
+      "configuration_verification_schema_version" => "kepler.worker-task-verification/v1",
+      "configuration_verified" => true,
+      "configuration_verified_task_id" => "task-alpha-001",
+      "configuration_verified_before_prompt" => true,
+      "configuration_verified_runtime_project_id" => "runtime-alpha-001",
+      "post_delivery_project_verification_schema_version" => "kepler.herdr-prompt-delivery/v1",
+      "post_delivery_project_verified" => true,
+      "post_delivery_project_verified_task_id" => "task-alpha-001",
+      "post_delivery_verified_runtime_project_id" => "runtime-alpha-001",
+      "post_delivery_verified_empty" => false,
+      "configuration_mode" => "global-config",
+      "permission_profile" => nil,
+      "sandbox_mode" => "danger-full-access",
+      "approval_policy" => "on-request",
+      "context_pack_id" => "ctx-synthetic-plan-alpha-change-r1",
+      "context_pack_estimated_tokens" => 1_000,
+      "context_pack_token_budget" => 2_000,
+      "dispatch_execution" => "current-control-task",
+      "intermediary_dispatch_task_created" => false,
+      "dispatch_owner_task_id" => "task-control-001",
+      "dispatch_owner_project_path" => "/synthetic/control",
+      "prompt_delivery_method" => "herdr-agent-prompt",
+      "prompt_delivery_schema_version" => "kepler.herdr-prompt-delivery/v1",
+      "prompt_delivery_id" => "alpha-change-r1",
+      "prompt_sha256" => "a" * 64,
+      "prompt_bytes" => 123,
+      "project_association_verification_source" => "cli-app-server-and-herdr-terminal",
+      "project_association_before" => {
+        "runtime_project_id" => "runtime-alpha-001",
+        "project_path" => worker_cwd,
+        "task_cwd" => worker_cwd
+      },
+      "project_association_after" => {
+        "runtime_project_id" => "runtime-alpha-001",
+        "project_path" => worker_cwd,
+        "task_cwd" => worker_cwd
+      },
+      "herdr_attachment" => herdr_attachment(task_id: "task-alpha-001", worker_cwd: worker_cwd)
+    }
+    assert_equal receipt, Kepler::Contracts.dispatch_receipt!(receipt)
+
+    missing = receipt.dup
+    missing.delete("prompt_sha256")
+    error = assert_raises(Kepler::ValidationError) do
+      Kepler::Contracts.dispatch_receipt!(missing)
+    end
+    assert_includes error.message, "prompt evidence is incomplete"
   end
 
   def test_dispatch_receipt_rejects_verification_for_another_task

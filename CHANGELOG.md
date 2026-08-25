@@ -1,5 +1,18 @@
 # Changelog
 
+## 1.1.2 - Unreleased
+
+- Added a persistent Codex CLI project catalog and explicitly confirmed CLI
+  project registration for desktop-independent Herdr setup.
+- Added exact ContextPack submission through `herdr agent prompt`, with
+  task/project/path/terminal verification and duplicate-delivery protection.
+- Added final-response-only WorkerResult collection from completed Herdr agents.
+- Kept every Herdr worker in a distinct owned tab inside the current control
+  workspace; dispatch no longer creates worker workspaces.
+- Made cleanup preview-only until one explicit `cleanup authorize`, then close
+  only receipt-owned worker tabs while preserving the control workspace.
+- Prohibited browser and Codex desktop-app fallbacks in the Herdr dispatch path.
+
 ## 1.1.1 - Unreleased
 
 - Kept planning, dispatch, status, and review in one Sol control task.

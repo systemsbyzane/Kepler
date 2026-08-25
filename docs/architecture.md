@@ -16,9 +16,11 @@ memory, and system status.
 
 Herdr is an optional execution-view adapter. Kepler first creates and verifies
 the exact app-server task and opaque project association, then Herdr resumes
-that same task in a receipt-owned workspace. Herdr never becomes a second
-worker identity or a source of unit completion. Explicit cleanup closes the
-owned view, archives the same Codex task, and removes only provably safe merged
+that same task in a receipt-owned worker tab inside the current control
+workspace. Herdr never becomes a second
+worker identity or a source of unit completion. Previewed and explicitly
+authorized cleanup closes the owned worker tab, preserves the control
+workspace, archives the same Codex task, and removes only provably safe merged
 Worktrees while retaining branches and structured evidence.
 
 Release invariants: planning does not mutate connected repositories; dispatch

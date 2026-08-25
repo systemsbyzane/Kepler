@@ -7,7 +7,8 @@ A release is ready only when every mandatory item below is evidenced.
 - `/kepler setup` starts in a `Kepler-<company>` control project and selects
   existing saved Codex projects by live opaque ID and exact normalized path.
 - Setup never asks for or scans a repositories root; it does not clone, move,
-  import, open, register, or edit selected projects.
+  import, open, or edit selected projects. In Herdr, an exact user-confirmed
+  path may create only a persistent Codex CLI project record.
 - The generated template contains no development, charts, patching, research,
   environments, compliance, Mission, or Operation workload topology and no
   pseudo-projects or clone roots.
@@ -25,9 +26,12 @@ A release is ready only when every mandatory item below is evidenced.
 - Workers are ordinary, directly accessible Codex tasks. ContextPacks are
   provenance-bearing initial context, never an exclusive boundary.
 - WorkerResults, not transcripts or task-state inference, advance readiness.
-- Optional Herdr attachment resumes the same verified Codex task; it never
-  substitutes a terminal-created worker or treats Herdr state as completion.
-- Cleanup is explicit, receipt-owned, branch-preserving, and fail-closed for
+- Herdr attachment resumes the same verified Codex CLI task in an owned worker
+  tab inside the current control workspace, submits the
+  ContextPack through that exact agent without desktop/browser controls, and
+  collects only the final response; it never treats Herdr state as completion.
+- Cleanup is preview-first, explicitly authorized once, receipt-owned,
+  control-workspace-preserving, branch-preserving, and fail-closed for
   active, dirty, unmerged, missing, or mismatched resources.
 - Natural language supplies objectives and Plan refinements. Setup, dispatch,
   review, status, and Doctor state changes use explicit `/kepler` commands.
