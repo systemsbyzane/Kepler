@@ -150,6 +150,9 @@ explicit model, reasoning, and sandbox/approval or profile arguments followed
 by `resume <final-task-id>`, verifies Herdr preserved the receipt-bound terminal
 and exact launch command, and returns the preserved workspace plus owned tab,
 pane, and agent identities. It must never create a separate worker workspace.
+If the new root pane returns the exact structured `agent_pane_busy` error while
+its shell settles, retry the identical Agent-start request on that same pane for
+at most five seconds. Never recreate the tab or retry another error code.
 If Herdr also exposes a Codex session ID, it must match the task.
 
 The attachment tool cannot send the ContextPack. After attachment, call
